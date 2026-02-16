@@ -36,8 +36,10 @@
                         <div class="col-6"><label>Pax</label><input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}"></div>
                         <div class="col-6"><label>Max €</label><input type="number" class="form-control" id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}"></div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 mb-2 fw-bold">Guardar Config</button>
-                    <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold">Buscar Ahora</button>
+                    
+                    <button type="submit" class="btn btn-primary w-100 mb-2 fw-bold"><i class="bi bi-save"></i> Guardar Config</button>
+                    <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold"><i class="bi bi-search"></i> Buscar Ahora</button>
+                    <button type="button" id="btnHistorial" class="btn btn-secondary w-100 mb-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalHistorial"><i class="bi bi-clock-history"></i> Ver Historial de Búsquedas</button>
                     <button type="button" id="btnTestTelegram" class="btn btn-outline-info w-100 fw-bold"><i class="bi bi-telegram"></i> Probar Telegram</button>
                 </form>
                 <div id="alertMsg" class="alert mt-3 d-none"></div>
@@ -56,7 +58,29 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title"><i class="bi bi-journal-text"></i> Registro Automático del Bot</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-sm table-striped" id="tablaHistorial">
+                <thead><tr><th>Fecha y Hora</th><th class="text-center">Vuelos Hallados</th><th>Mejor Precio</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // Guardar Configuración
     document.getElementById('configForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
@@ -74,6 +98,7 @@
         setTimeout(() => alertBox.classList.add('d-none'), 3000);
     });
 
+    // Buscar Ahora
     document.getElementById('btnBuscar').addEventListener('click', async () => {
         document.getElementById('loading').classList.remove('d-none');
         document.querySelector('#tablaResultados tbody').innerHTML = '';
@@ -81,18 +106,50 @@
         const data = await res.json();
         document.getElementById('loading').classList.add('d-none');
         const tbody = document.querySelector('#tablaResultados tbody');
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Sin resultados.</td></tr>'; return; }
+        
+        if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${data.mensaje}</td></tr>`; return; }
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Sin resultados por debajo de tu presupuesto.</td></tr>'; return; }
+        
         data.forEach(v => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
+            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-cart"></i> Ver</a></td>`;
             tbody.appendChild(tr);
         });
     });
 
+    // Probar Telegram
     document.getElementById('btnTestTelegram').addEventListener('click', async () => {
         const res = await fetch('/api/test_telegram', { method: 'POST' });
         const result = await res.json();
         alert(result.message);
+    });
+
+    // Cargar Historial al abrir el Modal
+    document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {
+        const tbody = document.querySelector('#tablaHistorial tbody');
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando historial...</td></tr>';
+        
+        try {
+            const res = await fetch('/api/historial');
+            const data = await res.json();
+            
+            tbody.innerHTML = '';
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas registradas.</td></tr>';
+                return;
+            }
+            
+            data.forEach(reg => {
+                let precioHTML = reg.mejor_precio !== "N/A" && reg.mejor_precio !== "Error de red" ? `${reg.mejor_precio} €` : reg.mejor_precio;
+                tbody.innerHTML += `<tr>
+                    <td class="small">${reg.fecha}</td>
+                    <td class="text-center fw-bold">${reg.vuelos_encontrados}</td>
+                    <td class="text-success fw-bold">${precioHTML}</td>
+                </tr>`;
+            });
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error al cargar el historial.</td></tr>';
+        }
     });
 </script>
 </body>

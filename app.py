@@ -4,6 +4,7 @@ import requests
 import datetime
 import urllib.parse
 import os
+import json
 from dotenv import load_dotenv
 
 # Cargar los secretos desde el archivo .env
@@ -95,8 +96,43 @@ def buscar_en_api(conf):
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
+def guardar_historial(vuelos):
+    archivo = "historial.json"
+    historial = []
+    
+    if os.path.exists(archivo):
+        try:
+            with open(archivo, 'r') as f:
+                historial = json.load(f)
+        except: pass
+        
+    # Validar si devolvió un error de conexión o una lista válida
+    if isinstance(vuelos, list):
+        vuelos_encontrados = len(vuelos)
+        mejor_precio = vuelos[0]['precio_pp'] if vuelos_encontrados > 0 else "N/A"
+    else:
+        vuelos_encontrados = 0
+        mejor_precio = "Error de red"
+
+    registro = {
+        "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "vuelos_encontrados": vuelos_encontrados,
+        "mejor_precio": mejor_precio
+    }
+    
+    historial.insert(0, registro)
+    historial = historial[:30] # Guarda los últimos 30 registros
+    
+    with open(archivo, 'w') as f:
+        json.dump(historial, f, indent=4)
+
 def tarea_en_segundo_plano():
+    print(f"[{datetime.datetime.now()}] 🔍 Ejecutando batida diaria en Google Flights...")
     vuelos = buscar_en_api(config)
+    
+    # Guardamos la búsqueda en el historial
+    guardar_historial(vuelos)
+    
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mejor_vuelo = vuelos[0]
         mensaje = (
@@ -109,6 +145,7 @@ def tarea_en_segundo_plano():
         url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
 
+# El temporizador está a 24 horas. ¡Pon minutes=1 si quieres probarlo rápido!
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=tarea_en_segundo_plano, trigger="interval", hours=24)
 scheduler.start()
@@ -127,13 +164,20 @@ def guardar_config():
 def buscar_ahora():
     return jsonify(buscar_en_api(config))
 
+@app.route('/api/historial', methods=['GET'])
+def ver_historial():
+    if os.path.exists("historial.json"):
+        with open("historial.json", 'r') as f:
+            return jsonify(json.load(f))
+    return jsonify([])
+
 @app.route('/api/test_telegram', methods=['POST'])
 def test_telegram():
     mensaje = "🤖 <b>Prueba de conexión</b>\n\nTu bot está enviando notificaciones correctamente."
     url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     res = requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
     if res.status_code == 200:
-        return jsonify({"status": "success", "message": "¡Mensaje enviado!"})
+        return jsonify({"status": "success", "message": "¡Mensaje enviado! Revisa Telegram."})
     return jsonify({"status": "error", "message": "Error al conectar con Telegram."})
 
 if __name__ == '__main__':
