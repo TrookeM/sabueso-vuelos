@@ -3,34 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✈️ Panel del Sabueso</title>
+    <title>✈️ Radar Multi-Destino</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 </head>
 <body class="bg-body-tertiary">
-<div class="container py-5">
-    <div class="text-center mb-5">
-        <h1 class="display-5 fw-bold text-primary"><i class="bi bi-radar"></i> Sabueso de Vuelos</h1>
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h1 class="display-5 fw-bold text-primary"><i class="bi bi-radar"></i> Radar Multi-Ruta</h1>
+        <p class="text-warning small">⚠️ Cuidado: Muchos destinos/fechas gastarán rápido tus 250 créditos.</p>
     </div>
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 bg-dark p-4 text-white">
                 <form id="configForm">
                     <div class="mb-3">
-                        <label class="form-label">Orígenes (IATA)</label>
-                        <input type="text" class="form-control" id="origenes" value="{{ config.origenes }}">
+                        <label class="form-label">Orígenes (separar con coma)</label>
+                        <input type="text" class="form-control" id="origenes" value="{{ config.origenes }}" placeholder="ALC,MAD">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Destino (IATA)</label>
-                        <input type="text" class="form-control" id="destino" value="{{ config.destino }}">
+                        <label class="form-label">Destinos (separar con coma)</label>
+                        <input type="text" class="form-control" id="destinos" value="{{ config.destinos }}" placeholder="KRK,WAW,BUD">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Fecha Ida</label>
-                        <input type="date" class="form-control" id="fecha_ida" value="{{ config.fecha_ida }}">
+                        <label class="form-label">Fechas Ida (YYYY-MM-DD, coma)</label>
+                        <input type="text" class="form-control" id="fechas_ida" value="{{ config.fechas_ida }}">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Fecha Vuelta</label>
-                        <input type="date" class="form-control" id="fecha_vuelta" value="{{ config.fecha_vuelta }}">
+                        <label class="form-label">Fechas Vuelta (Opcional, coma)</label>
+                        <input type="text" class="form-control" id="fechas_vuelta" value="{{ config.fechas_vuelta }}">
                     </div>
                     <div class="row mb-4">
                         <div class="col-6"><label>Pax</label><input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}"></div>
@@ -39,19 +40,18 @@
                     
                     <button type="submit" class="btn btn-primary w-100 mb-2 fw-bold"><i class="bi bi-save"></i> Guardar Config</button>
                     <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold"><i class="bi bi-search"></i> Buscar Ahora</button>
-                    <button type="button" id="btnHistorial" class="btn btn-secondary w-100 mb-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalHistorial"><i class="bi bi-clock-history"></i> Ver Historial de Búsquedas</button>
-                    <button type="button" id="btnTestTelegram" class="btn btn-outline-info w-100 fw-bold"><i class="bi bi-telegram"></i> Probar Telegram</button>
+                    <button type="button" class="btn btn-secondary w-100 mb-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalHistorial"><i class="bi bi-funnel"></i> Historial y Filtros</button>
                 </form>
                 <div id="alertMsg" class="alert mt-3 d-none"></div>
             </div>
         </div>
         <div class="col-lg-8">
-            <div class="card bg-dark shadow-sm border-0 p-0 overflow-hidden">
-                <div id="loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div></div>
+            <div class="card bg-dark shadow-sm border-0 p-0 overflow-hidden h-100">
+                <div id="loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Buscando combinaciones...</p></div>
                 <div class="table-responsive">
                     <table class="table table-dark table-hover mb-0" id="tablaResultados">
                         <thead><tr><th>Ruta/Fecha</th><th>Aerolínea</th><th>Estado</th><th>Precio</th><th>Acción</th></tr></thead>
-                        <tbody><tr><td colspan="5" class="text-center py-5">Usa "Buscar Ahora" para ver resultados.</td></tr></tbody>
+                        <tbody><tr><td colspan="5" class="text-center py-5">Resultados de la redada múltiple aparecerán aquí.</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -60,16 +60,18 @@
 </div>
 
 <div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content bg-dark text-white border-secondary">
       <div class="modal-header border-secondary">
-        <h5 class="modal-title"><i class="bi bi-journal-text"></i> Registro Automático del Bot</h5>
+        <h5 class="modal-title"><i class="bi bi-journal-text"></i> Base de Datos del Sabueso</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="table-responsive">
+        <input type="text" id="buscadorHistorial" class="form-control mb-3 bg-dark text-white border-secondary" placeholder="🔍 Filtrar por destino, precio, fecha... (Ej: KRK o 130)">
+        
+        <div class="table-responsive" style="max-height: 60vh;">
             <table class="table table-dark table-sm table-striped" id="tablaHistorial">
-                <thead><tr><th>Fecha y Hora</th><th class="text-center">Vuelos Hallados</th><th>Mejor Precio</th></tr></thead>
+                <thead><tr><th style="width: 15%">Ejecución</th><th style="width: 10%">Vuelos</th><th>Detalle de Mejores Chollos</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -80,14 +82,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Guardar Configuración
+    // Guardar multi-config
     document.getElementById('configForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
             origenes: document.getElementById('origenes').value.toUpperCase(),
-            destino: document.getElementById('destino').value.toUpperCase(),
-            fecha_ida: document.getElementById('fecha_ida').value,
-            fecha_vuelta: document.getElementById('fecha_vuelta').value,
+            destinos: document.getElementById('destinos').value.toUpperCase(),
+            fechas_ida: document.getElementById('fechas_ida').value,
+            fechas_vuelta: document.getElementById('fechas_vuelta').value,
             pasajeros: document.getElementById('pasajeros').value,
             precio_maximo_pp: document.getElementById('precio_maximo_pp').value
         };
@@ -98,7 +100,7 @@
         setTimeout(() => alertBox.classList.add('d-none'), 3000);
     });
 
-    // Buscar Ahora
+    // Buscar
     document.getElementById('btnBuscar').addEventListener('click', async () => {
         document.getElementById('loading').classList.remove('d-none');
         document.querySelector('#tablaResultados tbody').innerHTML = '';
@@ -107,49 +109,45 @@
         document.getElementById('loading').classList.add('d-none');
         const tbody = document.querySelector('#tablaResultados tbody');
         
-        if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">${data.mensaje}</td></tr>`; return; }
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Sin resultados por debajo de tu presupuesto.</td></tr>'; return; }
+        if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nada por debajo del presupuesto.</td></tr>'; return; }
         
         data.forEach(v => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-cart"></i> Ver</a></td>`;
+            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
             tbody.appendChild(tr);
         });
     });
 
-    // Probar Telegram
-    document.getElementById('btnTestTelegram').addEventListener('click', async () => {
-        const res = await fetch('/api/test_telegram', { method: 'POST' });
-        const result = await res.json();
-        alert(result.message);
-    });
-
-    // Cargar Historial al abrir el Modal
+    // Llenar Historial
     document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {
         const tbody = document.querySelector('#tablaHistorial tbody');
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando historial...</td></tr>';
-        
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando...</td></tr>';
         try {
             const res = await fetch('/api/historial');
             const data = await res.json();
-            
             tbody.innerHTML = '';
-            if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas registradas.</td></tr>';
-                return;
-            }
+            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Vacío.</td></tr>';
             
             data.forEach(reg => {
-                let precioHTML = reg.mejor_precio !== "N/A" && reg.mejor_precio !== "Error de red" ? `${reg.mejor_precio} €` : reg.mejor_precio;
                 tbody.innerHTML += `<tr>
-                    <td class="small">${reg.fecha}</td>
+                    <td class="small text-muted">${reg.fecha}</td>
                     <td class="text-center fw-bold">${reg.vuelos_encontrados}</td>
-                    <td class="text-success fw-bold">${precioHTML}</td>
+                    <td class="small">${reg.detalle}</td>
                 </tr>`;
             });
-        } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger">Error al cargar el historial.</td></tr>';
-        }
+        } catch (e) {}
+    });
+
+    // MAGIA: Filtro de búsqueda en tiempo real para el historial
+    document.getElementById('buscadorHistorial').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#tablaHistorial tbody tr');
+        
+        rows.forEach(row => {
+            let text = row.textContent.toLowerCase();
+            row.style.display = text.includes(filter) ? '' : 'none';
+        });
     });
 </script>
 </body>
