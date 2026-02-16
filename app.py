@@ -17,6 +17,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 # ==========================================================
 
+# Tu lista maestra para el botón "Explorar" (13 Destinos incluyendo NÓRDICOS)
+DESTINOS_EXPLORADOR = "LHR,CDG,FCO,BER,BUD,PRG,LIS,VIE,OSL,ARN,CPH,KEF,HEL"
+
 config = {
     "origenes": "ALC,MAD",
     "destinos": "KRK,WAW", 
@@ -35,8 +38,7 @@ def buscar_en_api(conf):
     fechas_ida = [f.strip() for f in conf["fechas_ida"].split(",") if f.strip()]
     fechas_vuelta = [f.strip() for f in conf["fechas_vuelta"].split(",")] if conf.get("fechas_vuelta") else []
 
-    if not fechas_ida:
-        return {"error": True, "mensaje": "Se requiere al menos una fecha de ida."}
+    if not fechas_ida: return {"error": True, "mensaje": "Se requiere al menos una fecha de ida."}
 
     for origen in origenes_lista:
         for destino in destinos_lista:
@@ -92,7 +94,7 @@ def buscar_en_api(conf):
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
-def guardar_historial(vuelos):
+def guardar_historial(vuelos, modo="Estándar"):
     archivo = "historial.json"
     historial = []
     if os.path.exists(archivo):
@@ -105,19 +107,18 @@ def guardar_historial(vuelos):
         registro = {
             "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "vuelos_encontrados": len(vuelos),
-            "detalle": " | ".join(mejores) if mejores else "Ninguno bajo presupuesto"
+            "detalle": f"[{modo}] " + (" | ".join(mejores) if mejores else "Ningún chollo hallado")
         }
     else:
-        registro = {"fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "vuelos_encontrados": 0, "detalle": "Error en API"}
+        registro = {"fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "vuelos_encontrados": 0, "detalle": f"[{modo}] Error en API"}
     
     historial.insert(0, registro)
     historial = historial[:50] 
     with open(archivo, 'w') as f: json.dump(historial, f, indent=4)
 
 def tarea_en_segundo_plano():
-    print(f"[{datetime.datetime.now()}] 🔍 Batida automática en progreso...")
     vuelos = buscar_en_api(config)
-    guardar_historial(vuelos)
+    guardar_historial(vuelos, "Automático")
     
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mensaje = "🚨 <b>¡NUEVOS CHOLLOS DETECTADOS!</b> 🚨\n\n"
@@ -125,9 +126,7 @@ def tarea_en_segundo_plano():
             mensaje += f"✈️ <b>{v['origen']} ➡️ {v['destino']}</b> ({v['fecha_detectada']})\n"
             mensaje += f"💶 Precio: {v['precio_pp']}€ - {v['estado_precio']}\n"
             mensaje += f"🔗 <a href='{v['enlace']}'>Ver vuelo</a>\n\n"
-            
-        url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=tarea_en_segundo_plano, trigger="interval", hours=24)
@@ -140,13 +139,38 @@ def index(): return render_template('index.html', config=config)
 def guardar_config():
     global config
     config.update(request.json)
-    return jsonify({"status": "success", "message": "✅ Configuración multi-ruta guardada."})
+    return jsonify({"status": "success", "message": "✅ Configuración guardada."})
 
-# ¡AQUÍ ESTÁ EL CAMBIO PARA QUE GUARDE LAS BÚSQUEDAS MANUALES!
 @app.route('/api/buscar', methods=['GET'])
 def buscar_ahora():
     vuelos = buscar_en_api(config)
-    guardar_historial(vuelos) 
+    guardar_historial(vuelos, "Manual")
+    return jsonify(vuelos)
+
+# ==========================================================
+# 🌟 LA MAGIA DEL BOTÓN DORADO "EXPLORAR"
+# ==========================================================
+@app.route('/api/explorar', methods=['GET'])
+def explorar_ahora():
+    # Copiamos tu config pero sobrescribimos los destinos con la lista maestra
+    conf_exp = config.copy()
+    conf_exp["destinos"] = DESTINOS_EXPLORADOR
+    
+    vuelos = buscar_en_api(conf_exp)
+    guardar_historial(vuelos, "EXPLORADOR")
+    
+    if isinstance(vuelos, list) and len(vuelos) > 0:
+        chollos = [v for v in vuelos if "🟢" in v.get('estado_precio', '')]
+        if chollos:
+            mensaje = "🌍 <b>RESUMEN MODO EXPLORADOR</b> 🌍\n"
+            mensaje += "<i>(Europa Central y Países Nórdicos)</i>\n\n"
+            for v in chollos[:6]: 
+                mensaje += f"📍 <b>{v['destino']}</b> desde {v['origen']}\n"
+                mensaje += f"💰 <b>{v['precio_pp']}€</b> ({v['fecha_detectada']})\n"
+                mensaje += f"🏢 {v['aerolinea']} | <a href='{v['enlace']}'>Comprar</a>\n"
+                mensaje += "---------------------------\n"
+            requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML", "disable_web_page_preview": True})
+
     return jsonify(vuelos)
 
 @app.route('/api/historial', methods=['GET'])

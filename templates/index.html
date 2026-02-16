@@ -6,28 +6,44 @@
     <title>✈️ Radar Multi-Destino</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        .btn-dorado { background: linear-gradient(45deg, #ffd700, #ff8c00); color: black; border: none; }
+        .btn-dorado:hover { background: linear-gradient(45deg, #ff8c00, #ffd700); color: black; font-weight: bold; }
+    </style>
 </head>
 <body class="bg-body-tertiary">
 <div class="container py-4">
     <div class="text-center mb-4">
         <h1 class="display-5 fw-bold text-primary"><i class="bi bi-radar"></i> Radar de Vuelos</h1>
-        <p class="text-warning small">⚠️ Cuidado: Muchos destinos/fechas gastarán rápido tus créditos de SerpApi.</p>
     </div>
     <div class="row g-4">
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 bg-dark p-4 text-white">
+                
+                <div class="alert alert-secondary border-secondary p-2 mb-4 text-center">
+                    <h6 class="mb-2"><i class="bi bi-calculator"></i> <b>Calculadora SerpApi (Max 250/mes)</b></h6>
+                    <div class="d-flex justify-content-between text-start small">
+                        <span>Coste Estándar:</span>
+                        <span id="calcEstandar" class="badge bg-success fs-6">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-start mt-1 small">
+                        <span>Coste EXPLORAR (13 dest):</span>
+                        <span id="calcExplorador" class="badge bg-warning text-dark fs-6">0</span>
+                    </div>
+                </div>
+
                 <form id="configForm">
                     <div class="mb-3">
                         <label class="form-label">Orígenes (separar con coma)</label>
-                        <input type="text" class="form-control" id="origenes" value="{{ config.origenes }}" placeholder="ALC,MAD">
+                        <input type="text" class="form-control calc-input" id="origenes" value="{{ config.origenes }}" placeholder="ALC,MAD">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Destinos (separar con coma)</label>
-                        <input type="text" class="form-control" id="destinos" value="{{ config.destinos }}" placeholder="KRK,WAW">
+                        <label class="form-label">Destinos Personales (separar con coma)</label>
+                        <input type="text" class="form-control calc-input" id="destinos" value="{{ config.destinos }}" placeholder="KRK,WAW">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Fechas Ida (YYYY-MM-DD, coma)</label>
-                        <input type="text" class="form-control" id="fechas_ida" value="{{ config.fechas_ida }}">
+                        <input type="text" class="form-control calc-input" id="fechas_ida" value="{{ config.fechas_ida }}">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Fechas Vuelta (Opcional, coma)</label>
@@ -39,16 +55,18 @@
                     </div>
                     
                     <button type="submit" class="btn btn-primary w-100 mb-2 fw-bold"><i class="bi bi-save"></i> Guardar Configuración</button>
-                    <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold"><i class="bi bi-search"></i> Buscar Ahora</button>
+                    <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold"><i class="bi bi-search"></i> Buscar Mis Destinos</button>
+                    
+                    <button type="button" id="btnExplorar" class="btn btn-dorado w-100 mb-3 fw-bold shadow"><i class="bi bi-globe-americas"></i> Modo EXPLORADOR (Nórdicos + EU)</button>
+                    
                     <button type="button" class="btn btn-secondary w-100 mb-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalHistorial"><i class="bi bi-funnel"></i> Historial y Filtros</button>
-                    <button type="button" id="btnTestTelegram" class="btn btn-outline-info w-100 fw-bold"><i class="bi bi-telegram"></i> Probar Telegram</button>
                 </form>
                 <div id="alertMsg" class="alert mt-3 d-none"></div>
             </div>
         </div>
         <div class="col-lg-8">
             <div class="card bg-dark shadow-sm border-0 p-0 overflow-hidden h-100">
-                <div id="loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Buscando combinaciones...</p></div>
+                <div id="loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted" id="loadingText">Rastreando los cielos...</p></div>
                 <div class="table-responsive">
                     <table class="table table-dark table-hover mb-0" id="tablaResultados">
                         <thead><tr><th>Ruta/Fecha</th><th>Aerolínea</th><th>Estado</th><th>Precio</th><th>Acción</th></tr></thead>
@@ -68,8 +86,7 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <input type="text" id="buscadorHistorial" class="form-control mb-3 bg-dark text-white border-secondary" placeholder="🔍 Filtrar por destino, precio, fecha... (Ej: KRK o 130)">
-        
+        <input type="text" id="buscadorHistorial" class="form-control mb-3 bg-dark text-white border-secondary" placeholder="🔍 Filtrar por destino, precio, modo... (Ej: EXPLORADOR o 130)">
         <div class="table-responsive" style="max-height: 60vh;">
             <table class="table table-dark table-sm table-striped" id="tablaHistorial">
                 <thead><tr><th style="width: 20%">Ejecución</th><th style="width: 10%" class="text-center">Vuelos</th><th>Detalle de Mejores Chollos</th></tr></thead>
@@ -83,6 +100,50 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    // MAGIA: CALCULADORA DINÁMICA DE CRÉDITOS
+    function actualizarCalculadora() {
+        const origenesStr = document.getElementById('origenes').value;
+        const destinosStr = document.getElementById('destinos').value;
+        const fechasStr = document.getElementById('fechas_ida').value;
+
+        // Cuenta cuántos elementos hay separados por coma (ignorando los vacíos)
+        const numOrigenes = origenesStr.split(',').filter(i => i.trim() !== "").length || 1;
+        const numDestinos = destinosStr.split(',').filter(i => i.trim() !== "").length || 1;
+        const numFechas = fechasStr.split(',').filter(i => i.trim() !== "").length || 1;
+
+        const creditosEstandar = numOrigenes * numDestinos * numFechas;
+        const creditosExplorador = numOrigenes * 13 * numFechas; // 13 es el tamaño de DESTINOS_EXPLORADOR
+
+        const badgeEst = document.getElementById('calcEstandar');
+        const badgeExp = document.getElementById('calcExplorador');
+
+        badgeEst.textContent = creditosEstandar;
+        badgeExp.textContent = creditosExplorador;
+
+        // Cambiar a color rojo si se pasa de la raya para avisarte
+        badgeEst.className = creditosEstandar > 15 ? "badge bg-danger fs-6" : "badge bg-success fs-6";
+        badgeExp.className = creditosExplorador > 50 ? "badge bg-danger fs-6" : "badge bg-warning text-dark fs-6";
+    }
+
+    // Escuchar cambios en los inputs para recalcular
+    document.querySelectorAll('.calc-input').forEach(input => {
+        input.addEventListener('input', actualizarCalculadora);
+    });
+    actualizarCalculadora(); // Calcular al cargar la página
+
+    // Función genérica para renderizar la tabla
+    function renderTabla(data) {
+        const tbody = document.querySelector('#tablaResultados tbody');
+        if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nada por debajo del presupuesto.</td></tr>'; return; }
+        
+        data.forEach(v => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
     // Guardar
     document.getElementById('configForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -101,30 +162,36 @@
         setTimeout(() => alertBox.classList.add('d-none'), 3000);
     });
 
-    // Buscar
+    // BÚSQUEDA NORMAL
     document.getElementById('btnBuscar').addEventListener('click', async () => {
+        document.getElementById('loadingText').textContent = "Rastreando tus destinos...";
         document.getElementById('loading').classList.remove('d-none');
         document.querySelector('#tablaResultados tbody').innerHTML = '';
+        
         const res = await fetch('/api/buscar');
         const data = await res.json();
+        
         document.getElementById('loading').classList.add('d-none');
-        const tbody = document.querySelector('#tablaResultados tbody');
-        
-        if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nada por debajo del presupuesto.</td></tr>'; return; }
-        
-        data.forEach(v => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
-            tbody.appendChild(tr);
-        });
+        renderTabla(data);
     });
 
-    // Telegram
-    document.getElementById('btnTestTelegram').addEventListener('click', async () => {
-        const res = await fetch('/api/test_telegram', { method: 'POST' });
-        const result = await res.json();
-        alert(result.message);
+    // BÚSQUEDA EXPLORADOR (EL BOTÓN DORADO)
+    document.getElementById('btnExplorar').addEventListener('click', async () => {
+        const coste = document.getElementById('calcExplorador').textContent;
+        // Ventana de confirmación de seguridad para los créditos
+        if(!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países (incluyendo los Nórdicos) y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) {
+            return;
+        }
+
+        document.getElementById('loadingText').textContent = "Escaneando media Europa y países Nórdicos. Esto puede tardar unos segundos...";
+        document.getElementById('loading').classList.remove('d-none');
+        document.querySelector('#tablaResultados tbody').innerHTML = '';
+        
+        const res = await fetch('/api/explorar');
+        const data = await res.json();
+        
+        document.getElementById('loading').classList.add('d-none');
+        renderTabla(data);
     });
 
     // Llenar Historial
@@ -135,10 +202,12 @@
             const res = await fetch('/api/historial');
             const data = await res.json();
             tbody.innerHTML = '';
-            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas registradas.</td></tr>';
+            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas.</td></tr>';
             
             data.forEach(reg => {
-                tbody.innerHTML += `<tr>
+                // Destacar si la búsqueda fue de explorador
+                const claseFila = reg.detalle.includes('[EXPLORADOR]') ? 'table-warning text-dark' : '';
+                tbody.innerHTML += `<tr class="${claseFila}">
                     <td class="small text-muted">${reg.fecha}</td>
                     <td class="text-center fw-bold">${reg.vuelos_encontrados}</td>
                     <td class="small">${reg.detalle}</td>
@@ -151,7 +220,6 @@
     document.getElementById('buscadorHistorial').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();
         let rows = document.querySelectorAll('#tablaHistorial tbody tr');
-        
         rows.forEach(row => {
             let text = row.textContent.toLowerCase();
             row.style.display = text.includes(filter) ? '' : 'none';
