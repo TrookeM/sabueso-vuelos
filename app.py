@@ -15,21 +15,36 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+CONFIG_FILE = "config.json"
 # ==========================================================
 
-# Tu lista maestra para el botón "Explorar" (13 Destinos incluyendo NÓRDICOS)
+# Destinos Maestra para el botón Explorar
 DESTINOS_EXPLORADOR = "LHR,CDG,FCO,BER,BUD,PRG,LIS,VIE,OSL,ARN,CPH,KEF,HEL"
 
-config = {
-    "origenes": "ALC,MAD",
-    "destinos": "KRK,WAW", 
-    "fechas_ida": "2026-03-26,2026-04-10", 
-    "fechas_vuelta": "2026-04-02,2026-04-17", 
-    "pasajeros": 2,
-    "precio_maximo_pp": 200 
-}
+# 💾 FUNCIÓN DE MEMORIA PERSISTENTE
+def cargar_configuracion():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except: pass
+    # Si no hay archivo, empezamos limpios para no gastar créditos
+    return {
+        "origenes": "",
+        "destinos": "", 
+        "fechas_ida": "", 
+        "fechas_vuelta": "", 
+        "pasajeros": 2,
+        "precio_maximo_pp": 200 
+    }
+
+config = cargar_configuracion()
 
 def buscar_en_api(conf):
+    # CORTAFUEGOS: Si está vacío, no disparamos a la API
+    if not conf.get("origenes") or not conf.get("destinos") or not conf.get("fechas_ida"):
+        return {"error": True, "mensaje": "⚠️ Faltan datos en la configuración. Rellena los campos y dale a Guardar primero."}
+
     url = "https://serpapi.com/search.json"
     resultados = []
     
@@ -37,8 +52,6 @@ def buscar_en_api(conf):
     destinos_lista = [d.strip().upper() for d in conf["destinos"].split(",") if d.strip()]
     fechas_ida = [f.strip() for f in conf["fechas_ida"].split(",") if f.strip()]
     fechas_vuelta = [f.strip() for f in conf["fechas_vuelta"].split(",")] if conf.get("fechas_vuelta") else []
-
-    if not fechas_ida: return {"error": True, "mensaje": "Se requiere al menos una fecha de ida."}
 
     for origen in origenes_lista:
         for destino in destinos_lista:
@@ -95,6 +108,9 @@ def buscar_en_api(conf):
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
 def guardar_historial(vuelos, modo="Estándar"):
+    # Evitar guardar en el historial si fue un error por estar vacío
+    if isinstance(vuelos, dict) and vuelos.get("error"): return
+        
     archivo = "historial.json"
     historial = []
     if os.path.exists(archivo):
@@ -117,6 +133,11 @@ def guardar_historial(vuelos, modo="Estándar"):
     with open(archivo, 'w') as f: json.dump(historial, f, indent=4)
 
 def tarea_en_segundo_plano():
+    # CORTAFUEGOS AUTOMÁTICO
+    if not config.get("origenes") or not config.get("destinos") or not config.get("fechas_ida"):
+        print(f"[{datetime.datetime.now()}] ⏸️ Batida cancelada: No hay configuración guardada.")
+        return
+
     vuelos = buscar_en_api(config)
     guardar_historial(vuelos, "Automático")
     
@@ -139,7 +160,12 @@ def index(): return render_template('index.html', config=config)
 def guardar_config():
     global config
     config.update(request.json)
-    return jsonify({"status": "success", "message": "✅ Configuración guardada."})
+    
+    # 💾 GUARDAR EN DISCO AL DARLE AL BOTÓN
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
+        
+    return jsonify({"status": "success", "message": "✅ Configuración guardada en disco. Sobrevivirá a reinicios."})
 
 @app.route('/api/buscar', methods=['GET'])
 def buscar_ahora():
@@ -147,12 +173,11 @@ def buscar_ahora():
     guardar_historial(vuelos, "Manual")
     return jsonify(vuelos)
 
-# ==========================================================
-# 🌟 LA MAGIA DEL BOTÓN DORADO "EXPLORAR"
-# ==========================================================
 @app.route('/api/explorar', methods=['GET'])
 def explorar_ahora():
-    # Copiamos tu config pero sobrescribimos los destinos con la lista maestra
+    if not config.get("origenes") or not config.get("fechas_ida"):
+        return jsonify({"error": True, "mensaje": "⚠️ Necesitas guardar al menos un Origen y una Fecha de Ida para explorar."})
+
     conf_exp = config.copy()
     conf_exp["destinos"] = DESTINOS_EXPLORADOR
     

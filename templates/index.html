@@ -43,11 +43,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Fechas Ida (YYYY-MM-DD, coma)</label>
-                        <input type="text" class="form-control calc-input" id="fechas_ida" value="{{ config.fechas_ida }}">
+                        <input type="text" class="form-control calc-input" id="fechas_ida" value="{{ config.fechas_ida }}" placeholder="2026-03-26">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Fechas Vuelta (Opcional, coma)</label>
-                        <input type="text" class="form-control" id="fechas_vuelta" value="{{ config.fechas_vuelta }}">
+                        <input type="text" class="form-control" id="fechas_vuelta" value="{{ config.fechas_vuelta }}" placeholder="2026-04-02">
                     </div>
                     <div class="row mb-4">
                         <div class="col-6"><label>Pax</label><input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}"></div>
@@ -66,7 +66,10 @@
         </div>
         <div class="col-lg-8">
             <div class="card bg-dark shadow-sm border-0 p-0 overflow-hidden h-100">
-                <div id="loading" class="text-center py-5 d-none"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted" id="loadingText">Rastreando los cielos...</p></div>
+                <div id="loading" class="text-center py-5 d-none">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 text-muted" id="loadingText">Rastreando los cielos...</p>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-dark table-hover mb-0" id="tablaResultados">
                         <thead><tr><th>Ruta/Fecha</th><th>Aerolínea</th><th>Estado</th><th>Precio</th><th>Acción</th></tr></thead>
@@ -106,10 +109,10 @@
         const destinosStr = document.getElementById('destinos').value;
         const fechasStr = document.getElementById('fechas_ida').value;
 
-        // Cuenta cuántos elementos hay separados por coma (ignorando los vacíos)
-        const numOrigenes = origenesStr.split(',').filter(i => i.trim() !== "").length || 1;
-        const numDestinos = destinosStr.split(',').filter(i => i.trim() !== "").length || 1;
-        const numFechas = fechasStr.split(',').filter(i => i.trim() !== "").length || 1;
+        // Cuenta cuántos elementos hay separados por coma. Si está vacío, devuelve 0.
+        const numOrigenes = origenesStr.split(',').filter(i => i.trim() !== "").length || 0;
+        const numDestinos = destinosStr.split(',').filter(i => i.trim() !== "").length || 0;
+        const numFechas = fechasStr.split(',').filter(i => i.trim() !== "").length || 0;
 
         const creditosEstandar = numOrigenes * numDestinos * numFechas;
         const creditosExplorador = numOrigenes * 13 * numFechas; // 13 es el tamaño de DESTINOS_EXPLORADOR
@@ -120,7 +123,7 @@
         badgeEst.textContent = creditosEstandar;
         badgeExp.textContent = creditosExplorador;
 
-        // Cambiar a color rojo si se pasa de la raya para avisarte
+        // Cambiar a color rojo si se pasa de la raya
         badgeEst.className = creditosEstandar > 15 ? "badge bg-danger fs-6" : "badge bg-success fs-6";
         badgeExp.className = creditosExplorador > 50 ? "badge bg-danger fs-6" : "badge bg-warning text-dark fs-6";
     }
@@ -178,7 +181,12 @@
     // BÚSQUEDA EXPLORADOR (EL BOTÓN DORADO)
     document.getElementById('btnExplorar').addEventListener('click', async () => {
         const coste = document.getElementById('calcExplorador').textContent;
-        // Ventana de confirmación de seguridad para los créditos
+        
+        if (coste === "0") {
+            alert("⚠️ Necesitas rellenar 'Orígenes' y 'Fechas de Ida' para poder explorar.");
+            return;
+        }
+
         if(!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países (incluyendo los Nórdicos) y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) {
             return;
         }
@@ -202,10 +210,9 @@
             const res = await fetch('/api/historial');
             const data = await res.json();
             tbody.innerHTML = '';
-            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas.</td></tr>';
+            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas registradas.</td></tr>';
             
             data.forEach(reg => {
-                // Destacar si la búsqueda fue de explorador
                 const claseFila = reg.detalle.includes('[EXPLORADOR]') ? 'table-warning text-dark' : '';
                 tbody.innerHTML += `<tr class="${claseFila}">
                     <td class="small text-muted">${reg.fecha}</td>
