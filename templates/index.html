@@ -24,8 +24,8 @@
                     <h6 class="mb-3 text-uppercase tracking-wider fw-bold"><i class="bi bi-cpu"></i> Telemetría del Sabueso</h6>
                     
                     <div class="mb-3 small text-info border-bottom border-secondary pb-3">
-                        <i class="bi bi-robot"></i> <b>Bot Automático Activo</b><br>
-                        Ejecuta tu configuración <b>cada 24 horas</b>
+                        <i class="bi bi-robot"></i> <b>Servicio Cron Activo</b><br>
+                        Batidas gestionadas por Linux OS
                     </div>
                     
                     <div class="d-flex justify-content-between text-start small mb-2">
@@ -121,14 +121,12 @@
             const badgeUso = document.getElementById('apiUso');
             if (!data.error) {
                 badgeUso.textContent = `${data.usado} / ${data.limite}`;
-                // Si pasas del 80% de créditos, se pone rojo para avisarte
                 if (data.usado > (data.limite * 0.8)) { badgeUso.className = "badge bg-danger fs-6 shadow-sm"; }
                 else { badgeUso.className = "badge bg-info text-dark fs-6 shadow-sm"; }
             } else { badgeUso.textContent = "Error"; }
         } catch (e) { document.getElementById('apiUso').textContent = "?"; }
     }
     
-    // Cargar telemetría al entrar en la página
     cargarUsoAPI();
 
     // 🧮 CALCULADORA DINÁMICA DE CRÉDITOS
@@ -195,7 +193,7 @@
         
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
-        cargarUsoAPI(); // 🔄 Actualizamos el medidor de créditos tras gastar
+        cargarUsoAPI(); 
     });
 
     document.getElementById('btnExplorar').addEventListener('click', async () => {
@@ -212,7 +210,7 @@
         
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
-        cargarUsoAPI(); // 🔄 Actualizamos el medidor de créditos tras gastar
+        cargarUsoAPI();
     });
 
     document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {

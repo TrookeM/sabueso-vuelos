@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
 import requests
 import datetime
 import urllib.parse
@@ -120,7 +119,7 @@ def guardar_historial(vuelos, modo="Estándar"):
 def tarea_en_segundo_plano():
     if not config.get("origenes") or not config.get("destinos") or not config.get("fechas_ida"): return
     vuelos = buscar_en_api(config)
-    guardar_historial(vuelos, "Automático")
+    guardar_historial(vuelos, "Automático (Cron)")
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mensaje = "🚨 <b>¡NUEVOS CHOLLOS DETECTADOS!</b> 🚨\n\n"
         for v in vuelos[:3]:
@@ -128,10 +127,6 @@ def tarea_en_segundo_plano():
             mensaje += f"💶 Precio: {v['precio_pp']}€ - {v['estado_precio']}\n"
             mensaje += f"🔗 <a href='{v['enlace']}'>Ver vuelo</a>\n\n"
         requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
-
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=tarea_en_segundo_plano, trigger="interval", hours=24)
-scheduler.start()
 
 @app.route('/')
 def index(): return render_template('index.html', config=config)
@@ -179,9 +174,6 @@ def ver_historial():
         with open("historial.json", 'r') as f: return jsonify(json.load(f))
     return jsonify([])
 
-# ==========================================================
-# 📊 NUEVO: TELEMETRÍA DE LA API
-# ==========================================================
 @app.route('/api/uso', methods=['GET'])
 def obtener_uso_api():
     try:
@@ -199,6 +191,18 @@ def test_telegram():
     res = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": "🤖 Test OK"})
     if res.status_code == 200: return jsonify({"status": "success", "message": "¡Mensaje enviado!"})
     return jsonify({"status": "error", "message": "Error al conectar."})
+
+# ==========================================================
+# ⚙️ RUTA SECRETA PARA EL CRON DE LINUX
+# ==========================================================
+@app.route('/api/cron_trigger', methods=['GET'])
+def trigger_del_cron():
+    # Seguridad: Solo el propio servidor puede pulsar este botón internamente
+    if request.remote_addr != '127.0.0.1':
+        return jsonify({"error": "Acceso denegado"}), 403
+    
+    tarea_en_segundo_plano()
+    return jsonify({"status": "Batida automática ejecutada con éxito"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
