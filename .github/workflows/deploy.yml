@@ -16,7 +16,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
-          script_stop: true
+          # Hemos quitado script_stop porque no es un comando válido
           script: |
             cd /root/sabueso-vuelos
             git pull
