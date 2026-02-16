@@ -3,7 +3,7 @@ name: Deploy Sabueso to VPS
 on:
   push:
     branches:
-      - main  # Se activa cuando haces push a la rama principal
+      - main
 
 jobs:
   deploy:
@@ -15,8 +15,9 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script_stop: true
           script: |
             cd /root/sabueso-vuelos
-            git pull origin main
-            # Reiniciamos el servicio para aplicar cambios automáticamente
+            git pull
             systemctl restart sabueso
