@@ -9,6 +9,10 @@
     <style>
         .btn-dorado { background: linear-gradient(45deg, #ffd700, #ff8c00); color: black; border: none; }
         .btn-dorado:hover { background: linear-gradient(45deg, #ff8c00, #ffd700); color: black; font-weight: bold; }
+        
+        /* Estilos específicos para las minitarjetas del historial */
+        .flight-card { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; min-width: 140px; text-align: center; }
+        .flight-card:hover { background-color: rgba(255,255,255,0.1); }
     </style>
 </head>
 <body class="bg-body-tertiary">
@@ -98,11 +102,18 @@
         <h5 class="modal-title"><i class="bi bi-journal-text"></i> Base de Datos del Sabueso</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <input type="text" id="buscadorHistorial" class="form-control mb-3 bg-dark text-white border-secondary" placeholder="🔍 Filtrar por destino, precio, modo... (Ej: EXPLORADOR o 130)">
-        <div class="table-responsive" style="max-height: 60vh;">
-            <table class="table table-dark table-sm table-striped" id="tablaHistorial">
-                <thead><tr><th style="width: 20%">Ejecución</th><th style="width: 10%" class="text-center">Vuelos</th><th>Detalle de Mejores Chollos</th></tr></thead>
+      <div class="modal-body p-4">
+        <input type="text" id="buscadorHistorial" class="form-control mb-4 bg-dark text-white border-secondary shadow-sm" placeholder="🔍 Buscar por destino, precio, ciudad... (Ej: KEF o 130)">
+        
+        <div class="table-responsive" style="max-height: 65vh;">
+            <table class="table table-dark table-hover align-middle" id="tablaHistorial">
+                <thead class="table-active">
+                    <tr>
+                        <th style="width: 15%">Ejecución</th>
+                        <th style="width: 10%" class="text-center">Hallazgos</th>
+                        <th>Detalle de los Mejores Vuelos</th>
+                    </tr>
+                </thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -158,10 +169,10 @@
     function renderTabla(data) {
         const tbody = document.querySelector('#tablaResultados tbody');
         if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
-        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nada por debajo del presupuesto.</td></tr>'; return; }
+        if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning py-4">Sin resultados por debajo del presupuesto.</td></tr>'; return; }
         data.forEach(v => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
+            tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small class="text-muted">${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success fs-6">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-cart"></i> Ver</a></td>`;
             tbody.appendChild(tr);
         });
     }
@@ -187,10 +198,8 @@
         document.getElementById('loadingText').textContent = "Rastreando tus destinos...";
         document.getElementById('loading').classList.remove('d-none');
         document.querySelector('#tablaResultados tbody').innerHTML = '';
-        
         const res = await fetch('/api/buscar');
         const data = await res.json();
-        
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
         cargarUsoAPI(); 
@@ -201,38 +210,88 @@
         if (coste === "0") { alert("⚠️ Necesitas rellenar 'Orígenes' y 'Fechas de Ida' para poder explorar."); return; }
         if(!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) { return; }
 
-        document.getElementById('loadingText').textContent = "Escaneando media Europa y países Nórdicos. Esto puede tardar unos segundos...";
+        document.getElementById('loadingText').textContent = "Escaneando media Europa y países Nórdicos...";
         document.getElementById('loading').classList.remove('d-none');
         document.querySelector('#tablaResultados tbody').innerHTML = '';
         
         const res = await fetch('/api/explorar');
         const data = await res.json();
-        
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
         cargarUsoAPI();
     });
 
+    // 🌟 NUEVO RENDERIZADOR DEL HISTORIAL ESTRUCTURADO
     document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {
         const tbody = document.querySelector('#tablaHistorial tbody');
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-secondary"></div></td></tr>';
+        
         try {
             const res = await fetch('/api/historial');
             const data = await res.json();
             tbody.innerHTML = '';
-            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning">Aún no hay búsquedas registradas.</td></tr>';
+            
+            if(data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning py-5">La base de datos está vacía.</td></tr>';
             
             data.forEach(reg => {
-                const claseFila = reg.detalle.includes('[EXPLORADOR]') ? 'table-warning text-dark' : '';
-                tbody.innerHTML += `<tr class="${claseFila}">
-                    <td class="small text-muted">${reg.fecha}</td>
-                    <td class="text-center fw-bold">${reg.vuelos_encontrados}</td>
-                    <td class="small">${reg.detalle}</td>
+                // 1. DIBUJAR LAS ETIQUETAS DE MODO (El color a la izquierda)
+                let badgeModo = "";
+                const modoFinal = reg.modo || (reg.detalle && reg.detalle.includes("EXPLORADOR") ? "EXPLORADOR" : "Desconocido");
+                
+                if (modoFinal.includes("EXPLORADOR")) { badgeModo = '<span class="badge bg-warning text-dark w-100 mt-2"><i class="bi bi-globe-americas"></i> Explorador</span>'; } 
+                else if (modoFinal.includes("Manual")) { badgeModo = '<span class="badge bg-primary w-100 mt-2"><i class="bi bi-person"></i> Manual</span>'; } 
+                else { badgeModo = '<span class="badge bg-info text-dark w-100 mt-2"><i class="bi bi-robot"></i> Automático</span>'; }
+
+                // 2. DIBUJAR LOS VUELOS (Flexbox mini-tarjetas)
+                let htmlVuelos = "";
+                
+                if (reg.mejores && reg.mejores.length > 0) {
+                    htmlVuelos = '<div class="d-flex flex-wrap gap-2">';
+                    reg.mejores.forEach(v => {
+                        htmlVuelos += `
+                        <div class="flight-card shadow-sm">
+                            <div class="fw-bold text-light" style="font-size: 0.9rem;">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
+                            <div class="text-success fw-bold fs-6 my-1">${v.precio} €</div>
+                            <div class="small text-muted" style="font-size: 0.75rem;">${v.fecha}</div>
+                        </div>`;
+                    });
+                    htmlVuelos += '</div>';
+                } 
+                // Compatibilidad con tu historial viejo (el que era feo)
+                else if (reg.detalle && reg.detalle !== "") {
+                    htmlVuelos = `<span class="text-muted small">${reg.detalle}</span>`;
+                } 
+                else {
+                    htmlVuelos = `<span class="text-muted small"><i class="bi bi-x-circle"></i> Ningún vuelo por debajo del presupuesto máximo fijado.</span>`;
+                }
+
+                // 3. SEPARAR FECHA Y HORA
+                const partesFecha = reg.fecha.split(' ');
+                const dia = partesFecha[0];
+                const hora = partesFecha[1] || '';
+
+                tbody.innerHTML += `
+                <tr>
+                    <td class="text-center border-end border-secondary">
+                        <div class="fw-bold fs-6">${dia}</div>
+                        <div class="small text-muted">${hora}</div>
+                        ${badgeModo}
+                    </td>
+                    <td class="text-center">
+                        <span class="display-6 fw-bold text-light">${reg.vuelos_encontrados}</span><br>
+                        <small class="text-muted">vuelos</small>
+                    </td>
+                    <td class="p-3">
+                        ${htmlVuelos}
+                    </td>
                 </tr>`;
             });
-        } catch (e) {}
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-4">Error al cargar la base de datos.</td></tr>';
+        }
     });
 
+    // Filtro del Historial
     document.getElementById('buscadorHistorial').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();
         let rows = document.querySelectorAll('#tablaHistorial tbody tr');

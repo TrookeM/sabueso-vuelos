@@ -93,6 +93,9 @@ def buscar_en_api(conf):
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
+# ==========================================================
+# 🌟 NUEVO SISTEMA DE HISTORIAL ESTRUCTURADO
+# ==========================================================
 def guardar_historial(vuelos, modo="Estándar"):
     if isinstance(vuelos, dict) and vuelos.get("error"): return
     archivo = "historial.json"
@@ -103,14 +106,29 @@ def guardar_historial(vuelos, modo="Estándar"):
         except: pass
         
     if isinstance(vuelos, list):
-        mejores = [f"{v['origen']}-{v['destino']} ({v['fecha_detectada']}): {v['precio_pp']}€" for v in vuelos[:5]]
+        # Guardamos un array de diccionarios en lugar de un texto gigante
+        mejores_vuelos = []
+        for v in vuelos[:6]: # Guardamos hasta los 6 mejores
+            mejores_vuelos.append({
+                "origen": v['origen'],
+                "destino": v['destino'],
+                "fecha": v['fecha_detectada'],
+                "precio": v['precio_pp']
+            })
+            
         registro = {
             "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "modo": modo,
             "vuelos_encontrados": len(vuelos),
-            "detalle": f"[{modo}] " + (" | ".join(mejores) if mejores else "Ningún chollo hallado")
+            "mejores": mejores_vuelos
         }
     else:
-        registro = {"fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "vuelos_encontrados": 0, "detalle": f"[{modo}] Error en API"}
+        registro = {
+            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "modo": modo,
+            "vuelos_encontrados": 0,
+            "mejores": []
+        }
     
     historial.insert(0, registro)
     historial = historial[:50] 
@@ -192,12 +210,8 @@ def test_telegram():
     if res.status_code == 200: return jsonify({"status": "success", "message": "¡Mensaje enviado!"})
     return jsonify({"status": "error", "message": "Error al conectar."})
 
-# ==========================================================
-# ⚙️ RUTA SECRETA PARA EL CRON DE LINUX
-# ==========================================================
 @app.route('/api/cron_trigger', methods=['GET'])
 def trigger_del_cron():
-    # Seguridad: Solo el propio servidor puede pulsar este botón internamente
     if request.remote_addr != '127.0.0.1':
         return jsonify({"error": "Acceso denegado"}), 403
     
