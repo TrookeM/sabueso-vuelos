@@ -12,6 +12,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # ==========================================================
+# 🔑 TUS CLAVES SECRETAS (Cargadas desde .env)
+# ==========================================================
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
@@ -29,7 +31,6 @@ config = {
 def buscar_en_api(conf):
     url = "https://serpapi.com/search.json"
     resultados = []
-    
     origenes_lista = [o.strip() for o in conf["origenes"].split(",")]
     destino_final = conf["destino"].strip().upper()
     
@@ -54,11 +55,8 @@ def buscar_en_api(conf):
             response = requests.get(url, params=params)
             data = response.json()
             
-            if "error" in data:
-                print(f"Error en SerpApi para {origen}: {data['error']}")
-                continue
+            if "error" in data: continue
             
-            # MAGIA: Extraer si es un chollo (Barato, Normal, Caro)
             nivel_precio = "⚪ Info no disp."
             if "price_insights" in data:
                 nivel = data["price_insights"].get("price_level", "")
@@ -81,54 +79,36 @@ def buscar_en_api(conf):
                 except:
                     fecha_real = conf["fecha_ida"]
                 
-                # Crear el enlace inteligente de Google Flights
                 query_vuelo = f"Vuelos desde {origen} a {destino_final} el {conf['fecha_ida']}"
                 if conf["fecha_vuelta"]:
                     query_vuelo += f" y vuelta el {conf['fecha_vuelta']}"
                 enlace_google = f"https://www.google.com/travel/flights?q={urllib.parse.quote(query_vuelo)}"
                 
                 resultados.append({
-                    "origen": origen,
-                    "destino": destino_final,
-                    "fecha_detectada": fecha_real,
-                    "aerolinea": aerolinea,
-                    "precio_total": round(precio_total, 2),
-                    "precio_pp": round(precio_pp, 2),
-                    "estado_precio": nivel_precio,
-                    "enlace": enlace_google
+                    "origen": origen, "destino": destino_final, "fecha_detectada": fecha_real,
+                    "aerolinea": aerolinea, "precio_total": round(precio_total, 2),
+                    "precio_pp": round(precio_pp, 2), "estado_precio": nivel_precio, "enlace": enlace_google
                 })
         except Exception as e:
-            print(f"Error de red buscando desde {origen}: {e}")
-            return {"error": True, "mensaje": f"Fallo al contactar con Google Flights desde {origen}."}
+            return {"error": True, "mensaje": f"Fallo al conectar con Google Flights."}
             
-    # Filtrar por presupuesto y ordenar
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
 def tarea_en_segundo_plano():
-    print(f"[{datetime.datetime.now()}] 🔍 Ejecutando batida diaria en Google Flights...")
     vuelos = buscar_en_api(config)
-    
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mejor_vuelo = vuelos[0]
         mensaje = (
-            f"🚨 <b>¡CHOLLO EN GOOGLE FLIGHTS!</b> 🚨\n\n"
+            f"🚨 <b>¡CHOLLO DETECTADO!</b> 🚨\n\n"
             f"✈️ Ruta: <b>{mejor_vuelo['origen']} ➡️ {mejor_vuelo['destino']}</b>\n"
-            f"📅 Fecha Ida: {mejor_vuelo['fecha_detectada']}\n\n"
-            f"📊 <b>Estado:</b> {mejor_vuelo['estado_precio']}\n"
-            f"👤 <b>Precio/Persona:</b> {mejor_vuelo['precio_pp']}€\n"
-            f"💶 <b>Precio Total:</b> {mejor_vuelo['precio_total']}€\n"
-            f"🏢 Aerolínea: {mejor_vuelo['aerolinea']}\n\n"
-            f"🔗 <a href='{mejor_vuelo['enlace']}'>Comprar en Google Flights</a>\n\n"
-            f"🌐 Abre tu panel en Tailscale para ver todos los resultados."
+            f"📊 Estado: {mejor_vuelo['estado_precio']}\n"
+            f"👤 Precio/Pers: {mejor_vuelo['precio_pp']}€\n\n"
+            f"🔗 <a href='{mejor_vuelo['enlace']}'>Ver en Google Flights</a>"
         )
         url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
-        print("¡Alerta de chollo enviada a Telegram!")
-    else:
-        print("Batida terminada: No hay vuelos por debajo de tu presupuesto hoy.")
 
-# El Sabueso trabaja 1 vez al día (cada 24 horas)
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=tarea_en_segundo_plano, trigger="interval", hours=24)
 scheduler.start()
@@ -141,11 +121,20 @@ def index():
 def guardar_config():
     global config
     config.update(request.json)
-    return jsonify({"status": "success", "message": "✅ Configuración guardada. El sabueso rastreará con estos datos."})
+    return jsonify({"status": "success", "message": "✅ Configuración guardada."})
 
 @app.route('/api/buscar', methods=['GET'])
 def buscar_ahora():
     return jsonify(buscar_en_api(config))
 
+@app.route('/api/test_telegram', methods=['POST'])
+def test_telegram():
+    mensaje = "🤖 <b>Prueba de conexión</b>\n\nTu bot está enviando notificaciones correctamente."
+    url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    res = requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+    if res.status_code == 200:
+        return jsonify({"status": "success", "message": "¡Mensaje enviado!"})
+    return jsonify({"status": "error", "message": "Error al conectar con Telegram."})
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)
