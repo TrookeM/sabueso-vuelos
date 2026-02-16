@@ -20,14 +20,24 @@
         <div class="col-lg-4">
             <div class="card shadow-sm border-0 bg-dark p-4 text-white">
                 
-                <div class="alert alert-secondary border-secondary p-2 mb-4 text-center">
-                    <h6 class="mb-2"><i class="bi bi-calculator"></i> <b>Calculadora SerpApi (Max 250/mes)</b></h6>
-                    <div class="d-flex justify-content-between text-start small">
-                        <span>Coste Estándar:</span>
+                <div class="alert alert-secondary border-secondary p-3 mb-4 text-center rounded">
+                    <h6 class="mb-3 text-uppercase tracking-wider fw-bold"><i class="bi bi-cpu"></i> Telemetría del Sabueso</h6>
+                    
+                    <div class="mb-3 small text-info border-bottom border-secondary pb-3">
+                        <i class="bi bi-robot"></i> <b>Bot Automático Activo</b><br>
+                        Ejecuta tu configuración <b>cada 24 horas</b>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between text-start small mb-2">
+                        <span><i class="bi bi-database"></i> <b>Uso de SerpApi:</b></span>
+                        <span id="apiUso" class="badge bg-info text-dark fs-6 shadow-sm"><i class="spinner-border spinner-border-sm"></i></span>
+                    </div>
+                    <div class="d-flex justify-content-between text-start small mt-3 text-muted">
+                        <span>Coste próxima batida:</span>
                         <span id="calcEstandar" class="badge bg-success fs-6">0</span>
                     </div>
-                    <div class="d-flex justify-content-between text-start mt-1 small">
-                        <span>Coste EXPLORAR (13 dest):</span>
+                    <div class="d-flex justify-content-between text-start mt-1 small text-muted">
+                        <span>Coste botón EXPLORAR:</span>
                         <span id="calcExplorador" class="badge bg-warning text-dark fs-6">0</span>
                     </div>
                 </div>
@@ -103,19 +113,36 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // MAGIA: CALCULADORA DINÁMICA DE CRÉDITOS
+    // 🌐 OBTENER EL USO DE LA API EN TIEMPO REAL
+    async function cargarUsoAPI() {
+        try {
+            const res = await fetch('/api/uso');
+            const data = await res.json();
+            const badgeUso = document.getElementById('apiUso');
+            if (!data.error) {
+                badgeUso.textContent = `${data.usado} / ${data.limite}`;
+                // Si pasas del 80% de créditos, se pone rojo para avisarte
+                if (data.usado > (data.limite * 0.8)) { badgeUso.className = "badge bg-danger fs-6 shadow-sm"; }
+                else { badgeUso.className = "badge bg-info text-dark fs-6 shadow-sm"; }
+            } else { badgeUso.textContent = "Error"; }
+        } catch (e) { document.getElementById('apiUso').textContent = "?"; }
+    }
+    
+    // Cargar telemetría al entrar en la página
+    cargarUsoAPI();
+
+    // 🧮 CALCULADORA DINÁMICA DE CRÉDITOS
     function actualizarCalculadora() {
         const origenesStr = document.getElementById('origenes').value;
         const destinosStr = document.getElementById('destinos').value;
         const fechasStr = document.getElementById('fechas_ida').value;
 
-        // Cuenta cuántos elementos hay separados por coma. Si está vacío, devuelve 0.
         const numOrigenes = origenesStr.split(',').filter(i => i.trim() !== "").length || 0;
         const numDestinos = destinosStr.split(',').filter(i => i.trim() !== "").length || 0;
         const numFechas = fechasStr.split(',').filter(i => i.trim() !== "").length || 0;
 
         const creditosEstandar = numOrigenes * numDestinos * numFechas;
-        const creditosExplorador = numOrigenes * 13 * numFechas; // 13 es el tamaño de DESTINOS_EXPLORADOR
+        const creditosExplorador = numOrigenes * 13 * numFechas; 
 
         const badgeEst = document.getElementById('calcEstandar');
         const badgeExp = document.getElementById('calcExplorador');
@@ -123,23 +150,17 @@
         badgeEst.textContent = creditosEstandar;
         badgeExp.textContent = creditosExplorador;
 
-        // Cambiar a color rojo si se pasa de la raya
         badgeEst.className = creditosEstandar > 15 ? "badge bg-danger fs-6" : "badge bg-success fs-6";
         badgeExp.className = creditosExplorador > 50 ? "badge bg-danger fs-6" : "badge bg-warning text-dark fs-6";
     }
 
-    // Escuchar cambios en los inputs para recalcular
-    document.querySelectorAll('.calc-input').forEach(input => {
-        input.addEventListener('input', actualizarCalculadora);
-    });
-    actualizarCalculadora(); // Calcular al cargar la página
+    document.querySelectorAll('.calc-input').forEach(input => { input.addEventListener('input', actualizarCalculadora); });
+    actualizarCalculadora();
 
-    // Función genérica para renderizar la tabla
     function renderTabla(data) {
         const tbody = document.querySelector('#tablaResultados tbody');
         if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
         if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nada por debajo del presupuesto.</td></tr>'; return; }
-        
         data.forEach(v => {
             const tr = document.createElement('tr');
             tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small>${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary">Ver</a></td>`;
@@ -147,7 +168,6 @@
         });
     }
 
-    // Guardar
     document.getElementById('configForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const data = {
@@ -165,7 +185,6 @@
         setTimeout(() => alertBox.classList.add('d-none'), 3000);
     });
 
-    // BÚSQUEDA NORMAL
     document.getElementById('btnBuscar').addEventListener('click', async () => {
         document.getElementById('loadingText').textContent = "Rastreando tus destinos...";
         document.getElementById('loading').classList.remove('d-none');
@@ -176,20 +195,13 @@
         
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
+        cargarUsoAPI(); // 🔄 Actualizamos el medidor de créditos tras gastar
     });
 
-    // BÚSQUEDA EXPLORADOR (EL BOTÓN DORADO)
     document.getElementById('btnExplorar').addEventListener('click', async () => {
         const coste = document.getElementById('calcExplorador').textContent;
-        
-        if (coste === "0") {
-            alert("⚠️ Necesitas rellenar 'Orígenes' y 'Fechas de Ida' para poder explorar.");
-            return;
-        }
-
-        if(!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países (incluyendo los Nórdicos) y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) {
-            return;
-        }
+        if (coste === "0") { alert("⚠️ Necesitas rellenar 'Orígenes' y 'Fechas de Ida' para poder explorar."); return; }
+        if(!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) { return; }
 
         document.getElementById('loadingText').textContent = "Escaneando media Europa y países Nórdicos. Esto puede tardar unos segundos...";
         document.getElementById('loading').classList.remove('d-none');
@@ -200,9 +212,9 @@
         
         document.getElementById('loading').classList.add('d-none');
         renderTabla(data);
+        cargarUsoAPI(); // 🔄 Actualizamos el medidor de créditos tras gastar
     });
 
-    // Llenar Historial
     document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {
         const tbody = document.querySelector('#tablaHistorial tbody');
         tbody.innerHTML = '<tr><td colspan="3" class="text-center">Cargando...</td></tr>';
@@ -223,14 +235,10 @@
         } catch (e) {}
     });
 
-    // Filtro del Historial
     document.getElementById('buscadorHistorial').addEventListener('keyup', function() {
         let filter = this.value.toLowerCase();
         let rows = document.querySelectorAll('#tablaHistorial tbody tr');
-        rows.forEach(row => {
-            let text = row.textContent.toLowerCase();
-            row.style.display = text.includes(filter) ? '' : 'none';
-        });
+        rows.forEach(row => { let text = row.textContent.toLowerCase(); row.style.display = text.includes(filter) ? '' : 'none'; });
     });
 </script>
 </body>

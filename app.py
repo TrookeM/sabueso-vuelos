@@ -18,30 +18,21 @@ SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 CONFIG_FILE = "config.json"
 # ==========================================================
 
-# Destinos Maestra para el botón Explorar
 DESTINOS_EXPLORADOR = "LHR,CDG,FCO,BER,BUD,PRG,LIS,VIE,OSL,ARN,CPH,KEF,HEL"
 
-# 💾 FUNCIÓN DE MEMORIA PERSISTENTE
 def cargar_configuracion():
     if os.path.exists(CONFIG_FILE):
         try:
-            with open(CONFIG_FILE, 'r') as f:
-                return json.load(f)
+            with open(CONFIG_FILE, 'r') as f: return json.load(f)
         except: pass
-    # Si no hay archivo, empezamos limpios para no gastar créditos
     return {
-        "origenes": "",
-        "destinos": "", 
-        "fechas_ida": "", 
-        "fechas_vuelta": "", 
-        "pasajeros": 2,
-        "precio_maximo_pp": 200 
+        "origenes": "", "destinos": "", "fechas_ida": "", 
+        "fechas_vuelta": "", "pasajeros": 2, "precio_maximo_pp": 200 
     }
 
 config = cargar_configuracion()
 
 def buscar_en_api(conf):
-    # CORTAFUEGOS: Si está vacío, no disparamos a la API
     if not conf.get("origenes") or not conf.get("destinos") or not conf.get("fechas_ida"):
         return {"error": True, "mensaje": "⚠️ Faltan datos en la configuración. Rellena los campos y dale a Guardar primero."}
 
@@ -73,7 +64,6 @@ def buscar_en_api(conf):
                 try:
                     response = requests.get(url, params=params)
                     data = response.json()
-                    
                     if "error" in data: continue
                     
                     nivel_precio = "⚪ Normal"
@@ -83,12 +73,10 @@ def buscar_en_api(conf):
                         elif nivel == "high": nivel_precio = "🔴 CARO"
                         
                     vuelos = data.get("best_flights", []) + data.get("other_flights", [])
-                    
                     for vuelo in vuelos:
                         precio_total = vuelo.get("price", 0)
                         if not precio_total: continue
                         precio_pp = precio_total / int(conf["pasajeros"])
-                        
                         tramos = vuelo.get("flights", [])
                         aerolinea = tramos[0].get("airline", "Varias") if tramos else "N/A"
                         
@@ -101,16 +89,13 @@ def buscar_en_api(conf):
                             "aerolinea": aerolinea, "precio_total": round(precio_total, 2),
                             "precio_pp": round(precio_pp, 2), "estado_precio": nivel_precio, "enlace": enlace_google
                         })
-                except Exception as e:
-                    print(f"Error en {origen}-{destino}: {e}")
+                except Exception as e: print(f"Error: {e}")
                     
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
 def guardar_historial(vuelos, modo="Estándar"):
-    # Evitar guardar en el historial si fue un error por estar vacío
     if isinstance(vuelos, dict) and vuelos.get("error"): return
-        
     archivo = "historial.json"
     historial = []
     if os.path.exists(archivo):
@@ -133,14 +118,9 @@ def guardar_historial(vuelos, modo="Estándar"):
     with open(archivo, 'w') as f: json.dump(historial, f, indent=4)
 
 def tarea_en_segundo_plano():
-    # CORTAFUEGOS AUTOMÁTICO
-    if not config.get("origenes") or not config.get("destinos") or not config.get("fechas_ida"):
-        print(f"[{datetime.datetime.now()}] ⏸️ Batida cancelada: No hay configuración guardada.")
-        return
-
+    if not config.get("origenes") or not config.get("destinos") or not config.get("fechas_ida"): return
     vuelos = buscar_en_api(config)
     guardar_historial(vuelos, "Automático")
-    
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mensaje = "🚨 <b>¡NUEVOS CHOLLOS DETECTADOS!</b> 🚨\n\n"
         for v in vuelos[:3]:
@@ -160,12 +140,8 @@ def index(): return render_template('index.html', config=config)
 def guardar_config():
     global config
     config.update(request.json)
-    
-    # 💾 GUARDAR EN DISCO AL DARLE AL BOTÓN
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=4)
-        
-    return jsonify({"status": "success", "message": "✅ Configuración guardada en disco. Sobrevivirá a reinicios."})
+    with open(CONFIG_FILE, 'w') as f: json.dump(config, f, indent=4)
+    return jsonify({"status": "success", "message": "✅ Configuración guardada en disco."})
 
 @app.route('/api/buscar', methods=['GET'])
 def buscar_ahora():
@@ -180,7 +156,6 @@ def explorar_ahora():
 
     conf_exp = config.copy()
     conf_exp["destinos"] = DESTINOS_EXPLORADOR
-    
     vuelos = buscar_en_api(conf_exp)
     guardar_historial(vuelos, "EXPLORADOR")
     
@@ -203,6 +178,21 @@ def ver_historial():
     if os.path.exists("historial.json"):
         with open("historial.json", 'r') as f: return jsonify(json.load(f))
     return jsonify([])
+
+# ==========================================================
+# 📊 NUEVO: TELEMETRÍA DE LA API
+# ==========================================================
+@app.route('/api/uso', methods=['GET'])
+def obtener_uso_api():
+    try:
+        url = f"https://serpapi.com/account.json?api_key={SERPAPI_KEY}"
+        res = requests.get(url)
+        data = res.json()
+        usado = data.get("this_month_usage", 0)
+        limite = data.get("searches_per_month", 250)
+        return jsonify({"usado": usado, "limite": limite, "error": False})
+    except Exception as e:
+        return jsonify({"usado": "?", "limite": 250, "error": True})
 
 @app.route('/api/test_telegram', methods=['POST'])
 def test_telegram():
