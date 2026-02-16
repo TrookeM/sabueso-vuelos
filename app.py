@@ -17,12 +17,11 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")
 # ==========================================================
 
-# Configuración actualizada para listas
 config = {
     "origenes": "ALC,MAD",
-    "destinos": "KRK,WAW", # Ahora en plural
-    "fechas_ida": "2026-03-26,2026-04-10", # Varias fechas separadas por coma
-    "fechas_vuelta": "2026-04-02,2026-04-17", # Deben coincidir en orden con las de ida
+    "destinos": "KRK,WAW", 
+    "fechas_ida": "2026-03-26,2026-04-10", 
+    "fechas_vuelta": "2026-04-02,2026-04-17", 
     "pasajeros": 2,
     "precio_maximo_pp": 200 
 }
@@ -31,7 +30,6 @@ def buscar_en_api(conf):
     url = "https://serpapi.com/search.json"
     resultados = []
     
-    # Preparamos las listas
     origenes_lista = [o.strip() for o in conf["origenes"].split(",") if o.strip()]
     destinos_lista = [d.strip().upper() for d in conf["destinos"].split(",") if d.strip()]
     fechas_ida = [f.strip() for f in conf["fechas_ida"].split(",") if f.strip()]
@@ -40,11 +38,9 @@ def buscar_en_api(conf):
     if not fechas_ida:
         return {"error": True, "mensaje": "Se requiere al menos una fecha de ida."}
 
-    # BUCLE TRIPLE: Por cada origen, hacia cada destino, en cada fecha
     for origen in origenes_lista:
         for destino in destinos_lista:
             for idx, f_ida in enumerate(fechas_ida):
-                # Asignar la fecha de vuelta correspondiente (si existe)
                 f_vuelta = fechas_vuelta[idx] if idx < len(fechas_vuelta) and fechas_vuelta[idx].strip() else None
                 
                 params = {
@@ -93,7 +89,6 @@ def buscar_en_api(conf):
                 except Exception as e:
                     print(f"Error en {origen}-{destino}: {e}")
                     
-    # Filtramos por presupuesto y ordenamos de más barato a más caro
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
@@ -106,27 +101,25 @@ def guardar_historial(vuelos):
         except: pass
         
     if isinstance(vuelos, list):
-        # Guardamos un resumen de los 5 mejores vuelos para poder filtrarlos en la web
         mejores = [f"{v['origen']}-{v['destino']} ({v['fecha_detectada']}): {v['precio_pp']}€" for v in vuelos[:5]]
         registro = {
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "vuelos_encontrados": len(vuelos),
             "detalle": " | ".join(mejores) if mejores else "Ninguno bajo presupuesto"
         }
     else:
-        registro = {"fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), "vuelos_encontrados": 0, "detalle": "Error en API"}
+        registro = {"fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "vuelos_encontrados": 0, "detalle": "Error en API"}
     
     historial.insert(0, registro)
-    historial = historial[:50] # Ampliado a 50 registros
+    historial = historial[:50] 
     with open(archivo, 'w') as f: json.dump(historial, f, indent=4)
 
 def tarea_en_segundo_plano():
-    print(f"[{datetime.datetime.now()}] 🔍 Batida múltiple en progreso...")
+    print(f"[{datetime.datetime.now()}] 🔍 Batida automática en progreso...")
     vuelos = buscar_en_api(config)
     guardar_historial(vuelos)
     
     if isinstance(vuelos, list) and len(vuelos) > 0:
-        # Telegram agrupará los 3 mejores chollos para no spamearte
         mensaje = "🚨 <b>¡NUEVOS CHOLLOS DETECTADOS!</b> 🚨\n\n"
         for v in vuelos[:3]:
             mensaje += f"✈️ <b>{v['origen']} ➡️ {v['destino']}</b> ({v['fecha_detectada']})\n"
@@ -149,8 +142,12 @@ def guardar_config():
     config.update(request.json)
     return jsonify({"status": "success", "message": "✅ Configuración multi-ruta guardada."})
 
+# ¡AQUÍ ESTÁ EL CAMBIO PARA QUE GUARDE LAS BÚSQUEDAS MANUALES!
 @app.route('/api/buscar', methods=['GET'])
-def buscar_ahora(): return jsonify(buscar_en_api(config))
+def buscar_ahora():
+    vuelos = buscar_en_api(config)
+    guardar_historial(vuelos) 
+    return jsonify(vuelos)
 
 @app.route('/api/historial', methods=['GET'])
 def ver_historial():
