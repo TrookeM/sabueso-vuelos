@@ -1,0 +1,22 @@
+name: Deploy Sabueso to VPS
+
+on:
+  push:
+    branches:
+      - main  # Se activa cuando haces push a la rama principal
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/sabueso-vuelos
+            git pull origin main
+            # Reiniciamos el servicio para aplicar cambios automáticamente
+            systemctl restart sabueso
