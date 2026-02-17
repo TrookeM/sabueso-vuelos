@@ -93,9 +93,6 @@ def buscar_en_api(conf):
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
 
-# ==========================================================
-# 🌟 NUEVO SISTEMA DE HISTORIAL ESTRUCTURADO
-# ==========================================================
 def guardar_historial(vuelos, modo="Estándar"):
     if isinstance(vuelos, dict) and vuelos.get("error"): return
     archivo = "historial.json"
@@ -106,9 +103,8 @@ def guardar_historial(vuelos, modo="Estándar"):
         except: pass
         
     if isinstance(vuelos, list):
-        # Guardamos un array de diccionarios en lugar de un texto gigante
         mejores_vuelos = []
-        for v in vuelos[:6]: # Guardamos hasta los 6 mejores
+        for v in vuelos[:6]: 
             mejores_vuelos.append({
                 "origen": v['origen'],
                 "destino": v['destino'],
@@ -136,15 +132,25 @@ def guardar_historial(vuelos, modo="Estándar"):
 
 def tarea_en_segundo_plano():
     if not config.get("origenes") or not config.get("destinos") or not config.get("fechas_ida"): return
+    
+    print(f"[{datetime.datetime.now()}] 🔍 Ejecutando cron automático...")
     vuelos = buscar_en_api(config)
     guardar_historial(vuelos, "Automático (Cron)")
+    
+    # URL Telegram
+    url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+
     if isinstance(vuelos, list) and len(vuelos) > 0:
         mensaje = "🚨 <b>¡NUEVOS CHOLLOS DETECTADOS!</b> 🚨\n\n"
         for v in vuelos[:3]:
             mensaje += f"✈️ <b>{v['origen']} ➡️ {v['destino']}</b> ({v['fecha_detectada']})\n"
             mensaje += f"💶 Precio: {v['precio_pp']}€ - {v['estado_precio']}\n"
             mensaje += f"🔗 <a href='{v['enlace']}'>Ver vuelo</a>\n\n"
-        requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+        requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+    else:
+        # MENSAJE DE VIDA: Si no encuentra nada, te avisa para que sepas que funciona
+        mensaje = "✅ <b>Reporte Diario del Sabueso:</b>\n\nHe rastreado tus rutas, pero hoy <b>no hay vuelos</b> por debajo de tu presupuesto límite.\n\nSeguiré vigilando mañana. 🫡"
+        requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
 
 @app.route('/')
 def index(): return render_template('index.html', config=config)
