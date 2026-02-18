@@ -418,7 +418,6 @@ function verDetalle(index) {
                             <div class="d-flex flex-column gap-1">
                                 <div class="d-flex gap-3">
                                     <div class="small text-info"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
-                                    <div class="small text-info"><i class="bi bi-calendar-check"></i> Llegada: ${fechaLlegada}</div>
                                 </div>
                                 ${vueltaHtml}
                             </div>
