@@ -70,25 +70,52 @@ def buscar_en_api(conf):
                         nivel = data["price_insights"].get("price_level", "")
                         if nivel == "low": nivel_precio = "🟢 BARATO"
                         elif nivel == "high": nivel_precio = "🔴 CARO"
+                        elif nivel == "typical": nivel_precio = "⚪ NORMAL"
                         
                     vuelos = data.get("best_flights", []) + data.get("other_flights", [])
                     for vuelo in vuelos:
                         precio_total = vuelo.get("price", 0)
                         if not precio_total: continue
                         precio_pp = precio_total / int(conf["pasajeros"])
+                        
                         tramos = vuelo.get("flights", [])
-                        aerolinea = tramos[0].get("airline", "Varias") if tramos else "N/A"
+                        aerolinea = "Varias"
+                        logo = ""
+                        duracion_minutos = 0
+                        escalas = 0
+
+                        if tramos:
+                            aerolinea = tramos[0].get("airline", "Varias")
+                            logo = tramos[0].get("airline_logo", "")
+                            duracion_minutos = vuelo.get("total_duration", 0)
+                            
+                            # Calcular escalas (tramos - 1)
+                            escalas = len(tramos) - 1
+
+                        # Formatear duración
+                        horas = duracion_minutos // 60
+                        minutos = duracion_minutos % 60
+                        duracion_fmt = f"{horas}h {minutos}m"
                         
                         query_vuelo = f"Vuelos desde {origen} a {destino} el {f_ida}"
                         if f_vuelta: query_vuelo += f" y vuelta el {f_vuelta}"
                         enlace_google = f"https://www.google.com/travel/flights?q={urllib.parse.quote(query_vuelo)}"
                         
                         resultados.append({
-                            "origen": origen, "destino": destino, "fecha_detectada": f_ida,
-                            "aerolinea": aerolinea, "precio_total": round(precio_total, 2),
-                            "precio_pp": round(precio_pp, 2), "estado_precio": nivel_precio, "enlace": enlace_google
+                            "origen": origen, 
+                            "destino": destino, 
+                            "fecha_detectada": f_ida,
+                            "fecha_vuelta": f_vuelta if f_vuelta else "",
+                            "aerolinea": aerolinea, 
+                            "logo_aerolinea": logo,
+                            "duracion": duracion_fmt,
+                            "escalas": escalas,
+                            "precio_total": round(precio_total, 2),
+                            "precio_pp": round(precio_pp, 2), 
+                            "estado_precio": nivel_precio, 
+                            "enlace": enlace_google
                         })
-                except Exception as e: print(f"Error: {e}")
+                except Exception as e: print(f"Error procesando {origen}-{destino}: {e}")
                     
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
@@ -102,30 +129,13 @@ def guardar_historial(vuelos, modo="Estándar"):
             with open(archivo, 'r') as f: historial = json.load(f)
         except: pass
         
-    if isinstance(vuelos, list):
-        mejores_vuelos = []
-        for v in vuelos[:6]: 
-            mejores_vuelos.append({
-                "origen": v['origen'],
-                "destino": v['destino'],
-                "fecha": v['fecha_detectada'],
-                "precio": v['precio_pp'],
-                "enlace": v.get('enlace', '#')
-            })
-            
-        registro = {
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "modo": modo,
-            "vuelos_encontrados": len(vuelos),
-            "mejores": mejores_vuelos
-        }
-    else:
-        registro = {
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "modo": modo,
-            "vuelos_encontrados": 0,
-            "mejores": []
-        }
+    registro = {
+        "id": datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
+        "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "modo": modo,
+        "vuelos_encontrados": len(vuelos) if isinstance(vuelos, list) else 0,
+        "mejores": vuelos[:10] if isinstance(vuelos, list) else [] # Guardamos top 10 con detalle
+    }
     
     historial.insert(0, registro)
     historial = historial[:50] 

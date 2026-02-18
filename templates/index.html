@@ -4,140 +4,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✈️ Radar Multi-Destino</title>
+    <title>✈️ Radar Multi-Destino | Premium</title>
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        .btn-dorado {
-            background: linear-gradient(45deg, #ffd700, #ff8c00);
-            color: black;
-            border: none;
-        }
-
-        .btn-dorado:hover {
-            background: linear-gradient(45deg, #ff8c00, #ffd700);
-            color: black;
-            font-weight: bold;
-        }
-
-        .flight-card {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 8px;
-            min-width: 140px;
-            text-align: center;
-        }
-
-        .flight-card:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-    </style>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
-<body class="bg-body-tertiary">
-    <div class="container py-4">
-        <div class="text-center mb-4">
-            <h1 class="display-5 fw-bold text-primary"><i class="bi bi-radar"></i> Radar de Vuelos</h1>
-        </div>
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card shadow-sm border-0 bg-dark p-4 text-white">
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- SIDEBAR -->
+            <div class="col-lg-3 col-md-4 d-none d-md-block sidebar glass">
+                <div class="text-center mb-5 mt-3">
+                    <h2 class="fw-bold text-gradient"><i class="bi bi-radar"></i> SABUESO</h2>
+                    <p class="text-muted small">v2.0 Premium Radar</p>
+                </div>
 
-                    <div class="alert alert-secondary border-secondary p-3 mb-4 text-center rounded">
-                        <h6 class="mb-3 text-uppercase tracking-wider fw-bold"><i class="bi bi-cpu"></i> Telemetría del
-                            Sabueso</h6>
+                <div class="glass-card mb-4 p-3">
+                    <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-cpu"></i> Telemetría</h6>
 
-                        <div class="mb-3 small text-info border-bottom border-secondary pb-3">
-                            <i class="bi bi-robot"></i> <b>Servicio Cron Activo</b><br>
-                            Batidas gestionadas por Linux OS
-                        </div>
-
-                        <div class="d-flex justify-content-between text-start small mb-2">
-                            <span><i class="bi bi-database"></i> <b>Uso de SerpApi:</b></span>
-                            <span id="apiUso" class="badge bg-info text-dark fs-6 shadow-sm"><i
-                                    class="spinner-border spinner-border-sm"></i></span>
-                        </div>
-                        <div class="d-flex justify-content-between text-start small mt-3 text-muted">
-                            <span>Coste próxima batida:</span>
-                            <span id="calcEstandar" class="badge bg-success fs-6">0</span>
-                        </div>
-                        <div class="d-flex justify-content-between text-start mt-1 small text-muted">
-                            <span>Coste botón EXPLORAR:</span>
-                            <span id="calcExplorador" class="badge bg-warning text-dark fs-6">0</span>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-light">Estado API</span>
+                        <span id="apiUso" class="badge bg-secondary">...</span>
                     </div>
 
-                    <form id="configForm">
-                        <div class="mb-3">
-                            <label class="form-label">Orígenes (separar con coma)</label>
-                            <input type="text" class="form-control calc-input" id="origenes"
-                                value="{{ config.origenes }}" placeholder="ALC,MAD">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Destinos Personales (separar con coma)</label>
-                            <input type="text" class="form-control calc-input" id="destinos"
-                                value="{{ config.destinos }}" placeholder="KRK,WAW">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Fechas Ida (YYYY-MM-DD, coma)</label>
-                            <input type="text" class="form-control calc-input" id="fechas_ida"
-                                value="{{ config.fechas_ida }}" placeholder="2026-03-26">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Fechas Vuelta (Opcional, coma)</label>
-                            <input type="text" class="form-control" id="fechas_vuelta"
-                                value="{{ config.fechas_vuelta }}" placeholder="2026-04-02">
-                        </div>
-                        <div class="row mb-4">
-                            <div class="col-5">
-                                <label class="form-label">Pasajeros</label>
-                                <input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}">
-                            </div>
-                            <div class="col-7">
-                                <label class="form-label text-warning fw-bold">Max € / Persona</label>
-                                <input type="number" class="form-control border-warning" id="precio_maximo_pp"
-                                    value="{{ config.precio_maximo_pp }}"
-                                    title="Establece el límite de gasto por cada pasajero">
-                            </div>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-light">Coste Búsqueda</span>
+                        <span id="calcEstandar" class="badge bg-secondary">0</span>
+                    </div>
 
-                        <button type="submit" class="btn btn-primary w-100 mb-2 fw-bold"><i class="bi bi-save"></i>
-                            Guardar Configuración</button>
-                        <button type="button" id="btnBuscar" class="btn btn-success w-100 mb-2 fw-bold"><i
-                                class="bi bi-search"></i> Buscar Mis Destinos</button>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-light">Coste Explorador</span>
+                        <span id="calcExplorador" class="badge bg-secondary">0</span>
+                    </div>
+                </div>
 
-                        <button type="button" id="btnExplorar" class="btn btn-dorado w-100 mb-3 fw-bold shadow"><i
-                                class="bi bi-globe-americas"></i> Modo EXPLORADOR (Nórdicos + EU)</button>
-
-                        <button type="button" class="btn btn-secondary w-100 mb-2 fw-bold" data-bs-toggle="modal"
-                            data-bs-target="#modalHistorial"><i class="bi bi-funnel"></i> Historial y Filtros</button>
-                    </form>
-                    <div id="alertMsg" class="alert mt-3 d-none"></div>
+                <div class="mt-auto">
+                    <button class="btn btn-outline-light w-100 mb-3" data-bs-toggle="modal"
+                        data-bs-target="#modalHistorial">
+                        <i class="bi bi-clock-history me-2"></i> Historial de Batidas
+                    </button>
+                    <p class="text-center text-muted small">&copy; 2026 Sabueso Vuelos</p>
                 </div>
             </div>
-            <div class="col-lg-8">
-                <div class="card bg-dark shadow-sm border-0 p-0 overflow-hidden h-100">
-                    <div id="loading" class="text-center py-5 d-none">
-                        <div class="spinner-border text-primary"></div>
-                        <p class="mt-2 text-muted" id="loadingText">Rastreando los cielos...</p>
+
+            <!-- MAIN CONTENT -->
+            <div class="col-lg-9 col-md-8 p-4">
+                <!-- Mobile Header -->
+                <div class="d-md-none d-flex justify-content-between align-items-center mb-4 glass p-3">
+                    <h4 class="m-0 text-gradient"><i class="bi bi-radar"></i> Sabueso</h4>
+                    <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal"
+                        data-bs-target="#modalHistorial">
+                        <i class="bi bi-clock-history"></i>
+                    </button>
+                </div>
+
+                <div class="row g-4">
+                    <!-- CONFIGURATION PANEL -->
+                    <div class="col-xl-4 col-lg-12">
+                        <div class="glass-card h-100">
+                            <h4 class="mb-4 text-light"><i class="bi bi-sliders"></i> Configuración</h4>
+
+                            <form id="configForm">
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted text-uppercase fw-bold">Orígenes</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-secondary text-light"><i
+                                                class="bi bi-geo-alt"></i></span>
+                                        <input type="text" class="form-control" id="origenes"
+                                            value="{{ config.origenes }}" placeholder="MAD, BCN">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted text-uppercase fw-bold">Destinos</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-transparent border-secondary text-light"><i
+                                                class="bi bi-pin-map"></i></span>
+                                        <input type="text" class="form-control" id="destinos"
+                                            value="{{ config.destinos }}" placeholder="TOK, NYC">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted text-uppercase fw-bold">Salida</label>
+                                        <input type="text" class="form-control" id="fechas_ida"
+                                            value="{{ config.fechas_ida }}" placeholder="YYYY-MM-DD">
+                                    </div>
+                                    <div class="col-6">
+                                        <label
+                                            class="form-label small text-muted text-uppercase fw-bold">Regreso</label>
+                                        <input type="text" class="form-control" id="fechas_vuelta"
+                                            value="{{ config.fechas_vuelta }}" placeholder="Opcional">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-4">
+                                    <div class="col-6">
+                                        <label class="form-label small text-muted text-uppercase fw-bold">Pax</label>
+                                        <input type="number" class="form-control" id="pasajeros"
+                                            value="{{ config.pasajeros }}">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small text-warning fw-bold text-uppercase">Max
+                                            €</label>
+                                        <input type="number" class="form-control border-warning text-warning"
+                                            id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>
+                                        Guardar Cambios</button>
+                                    <button type="button" id="btnBuscar" class="btn btn-success"><i
+                                            class="bi bi-search me-2"></i> Buscar Ahora</button>
+                                    <button type="button" id="btnExplorar" class="btn btn-dorado mt-2"><i
+                                            class="bi bi-globe-europe-africa me-2"></i> Modo EXPLORADOR</button>
+                                </div>
+                            </form>
+                            <div id="alertMsg" class="d-none"></div>
+                        </div>
                     </div>
+
+                    <!-- RESULTS PANEL -->
+                    <div class="col-xl-8 col-lg-12">
+                        <div class="glass-card h-100 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h4 class="m-0 text-light"><i class="bi bi-airplane-engines"></i> Resultados del Radar
+                                </h4>
+                                <span class="badge bg-secondary bg-opacity-25 border border-secondary text-light">En
+                                    tiempo real</span>
+                            </div>
+
+                            <div id="loading" class="loader-container d-none">
+                                <i class="bi bi-airplane-fill plane-loader"></i>
+                                <p class="mt-3 text-muted" id="loadingText">Contactando satélites...</p>
+                            </div>
+
+                            <div class="table-responsive flex-grow-1">
+                                <table class="table table-custom align-middle" id="tablaResultados">
+                                    <thead>
+                                        <tr class="text-muted small text-uppercase">
+                                            <th>Ruta / Fecha</th>
+                                            <th>Aerolínea</th>
+                                            <th>Estado</th>
+                                            <th class="text-end">Precio</th>
+                                            <th class="text-end">Link</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted py-5">
+                                                <i class="bi bi-arrow-left-circle fs-1 d-block mb-3 opacity-25"></i>
+                                                Lanza una búsqueda para ver resultados aquí.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL HISTORIAL -->
+    <div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true" data-bs-backdrop="blur">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content glass border-0 text-light">
+                <div class="modal-header border-secondary border-opacity-25">
+                    <h5 class="modal-title"><i class="bi bi-database me-2"></i> Registro de Operaciones</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-dark bg-opacity-50">
+                    <div class="input-group mb-4">
+                        <span class="input-group-text bg-transparent border-secondary text-light"><i
+                                class="bi bi-search"></i></span>
+                        <input type="text" id="buscadorHistorial"
+                            class="form-control border-secondary text-light bg-transparent"
+                            placeholder="Filtrar por ciudad, precio o fecha...">
+                    </div>
+
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover mb-0" id="tablaResultados">
+                        <table class="table table-custom mb-0" id="tablaHistorial">
                             <thead>
-                                <tr>
-                                    <th>Ruta/Fecha</th>
-                                    <th>Aerolínea</th>
-                                    <th>Estado</th>
-                                    <th>Precio</th>
-                                    <th>Acción</th>
+                                <tr class="text-muted small text-uppercase">
+                                    <th style="width: 15%">Timestamp</th>
+                                    <th style="width: 10%" class="text-center">Hallazgos</th>
+                                    <th>Mejores Oportunidades</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td colspan="5" class="text-center py-5">Resultados de la redada aparecerán aquí.
-                                    </td>
-                                </tr>
+                                <!-- JS llenará esto -->
                             </tbody>
                         </table>
                     </div>
@@ -146,210 +212,8 @@
         </div>
     </div>
 
-    <div class="modal fade" id="modalHistorial" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content bg-dark text-white border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title"><i class="bi bi-journal-text"></i> Base de Datos del Sabueso</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <input type="text" id="buscadorHistorial"
-                        class="form-control mb-4 bg-dark text-white border-secondary shadow-sm"
-                        placeholder="🔍 Buscar por destino, precio, ciudad... (Ej: KEF o 130)">
-
-                    <div class="table-responsive" style="max-height: 65vh;">
-                        <table class="table table-dark table-hover align-middle" id="tablaHistorial">
-                            <thead class="table-active">
-                                <tr>
-                                    <th style="width: 15%">Ejecución</th>
-                                    <th style="width: 10%" class="text-center">Hallazgos</th>
-                                    <th>Detalle de los Mejores Vuelos</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        async function cargarUsoAPI() {
-            try {
-                const res = await fetch('/api/uso');
-                const data = await res.json();
-                const badgeUso = document.getElementById('apiUso');
-                if (!data.error) {
-                    badgeUso.textContent = `${data.usado} / ${data.limite}`;
-                    if (data.usado > (data.limite * 0.8)) { badgeUso.className = "badge bg-danger fs-6 shadow-sm"; }
-                    else { badgeUso.className = "badge bg-info text-dark fs-6 shadow-sm"; }
-                } else { badgeUso.textContent = "Error"; }
-            } catch (e) { document.getElementById('apiUso').textContent = "?"; }
-        }
-
-        cargarUsoAPI();
-
-        function actualizarCalculadora() {
-            const origenesStr = document.getElementById('origenes').value;
-            const destinosStr = document.getElementById('destinos').value;
-            const fechasStr = document.getElementById('fechas_ida').value;
-
-            const numOrigenes = origenesStr.split(',').filter(i => i.trim() !== "").length || 0;
-            const numDestinos = destinosStr.split(',').filter(i => i.trim() !== "").length || 0;
-            const numFechas = fechasStr.split(',').filter(i => i.trim() !== "").length || 0;
-
-            const creditosEstandar = numOrigenes * numDestinos * numFechas;
-            const creditosExplorador = numOrigenes * 13 * numFechas;
-
-            const badgeEst = document.getElementById('calcEstandar');
-            const badgeExp = document.getElementById('calcExplorador');
-
-            badgeEst.textContent = creditosEstandar;
-            badgeExp.textContent = creditosExplorador;
-
-            badgeEst.className = creditosEstandar > 15 ? "badge bg-danger fs-6" : "badge bg-success fs-6";
-            badgeExp.className = creditosExplorador > 50 ? "badge bg-danger fs-6" : "badge bg-warning text-dark fs-6";
-        }
-
-        document.querySelectorAll('.calc-input').forEach(input => { input.addEventListener('input', actualizarCalculadora); });
-        actualizarCalculadora();
-
-        function renderTabla(data) {
-            const tbody = document.querySelector('#tablaResultados tbody');
-            if (data.error) { tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${data.mensaje}</td></tr>`; return; }
-            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-warning py-4">Sin resultados por debajo del presupuesto por persona.</td></tr>'; return; }
-            data.forEach(v => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td><b>${v.origen} ➜ ${v.destino}</b><br><small class="text-muted">${v.fecha_detectada}</small></td><td>${v.aerolinea}</td><td>${v.estado_precio}</td><td><span class="badge bg-success fs-6">${v.precio_pp} €</span></td><td><a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary"><i class="bi bi-cart"></i> Ver</a></td>`;
-                tbody.appendChild(tr);
-            });
-        }
-
-        document.getElementById('configForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const data = {
-                origenes: document.getElementById('origenes').value.toUpperCase(),
-                destinos: document.getElementById('destinos').value.toUpperCase(),
-                fechas_ida: document.getElementById('fechas_ida').value,
-                fechas_vuelta: document.getElementById('fechas_vuelta').value,
-                pasajeros: document.getElementById('pasajeros').value,
-                precio_maximo_pp: document.getElementById('precio_maximo_pp').value
-            };
-            const res = await fetch('/api/guardar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-            const result = await res.json();
-            const alertBox = document.getElementById('alertMsg');
-            alertBox.textContent = result.message; alertBox.className = 'alert mt-3 alert-success'; alertBox.classList.remove('d-none');
-            setTimeout(() => alertBox.classList.add('d-none'), 3000);
-        });
-
-        document.getElementById('btnBuscar').addEventListener('click', async () => {
-            document.getElementById('loadingText').textContent = "Rastreando tus destinos...";
-            document.getElementById('loading').classList.remove('d-none');
-            document.querySelector('#tablaResultados tbody').innerHTML = '';
-            const res = await fetch('/api/buscar');
-            const data = await res.json();
-            document.getElementById('loading').classList.add('d-none');
-            renderTabla(data);
-            cargarUsoAPI();
-        });
-
-        document.getElementById('btnExplorar').addEventListener('click', async () => {
-            const coste = document.getElementById('calcExplorador').textContent;
-            if (coste === "0") { alert("⚠️ Necesitas rellenar 'Orígenes' y 'Fechas de Ida' para poder explorar."); return; }
-            if (!confirm(`⚠️ ATENCIÓN: Esta batida buscará en 13 países y consumirá ${coste} créditos de tus 250 mensuales. ¿Estás seguro de lanzarla?`)) { return; }
-
-            document.getElementById('loadingText').textContent = "Escaneando media Europa y países Nórdicos...";
-            document.getElementById('loading').classList.remove('d-none');
-            document.querySelector('#tablaResultados tbody').innerHTML = '';
-
-            const res = await fetch('/api/explorar');
-            const data = await res.json();
-            document.getElementById('loading').classList.add('d-none');
-            renderTabla(data);
-            cargarUsoAPI();
-        });
-
-        document.getElementById('modalHistorial').addEventListener('show.bs.modal', async () => {
-            const tbody = document.querySelector('#tablaHistorial tbody');
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-secondary"></div></td></tr>';
-
-            try {
-                const res = await fetch('/api/historial');
-                const data = await res.json();
-                tbody.innerHTML = '';
-
-                if (data.length === 0) return tbody.innerHTML = '<tr><td colspan="3" class="text-center text-warning py-5">La base de datos está vacía.</td></tr>';
-
-                data.forEach(reg => {
-                    let badgeModo = "";
-                    const modoFinal = reg.modo || (reg.detalle && reg.detalle.includes("EXPLORADOR") ? "EXPLORADOR" : "Desconocido");
-
-                    if (modoFinal.includes("EXPLORADOR")) { badgeModo = '<span class="badge bg-warning text-dark w-100 mt-2"><i class="bi bi-globe-americas"></i> Explorador</span>'; }
-                    else if (modoFinal.includes("Manual")) { badgeModo = '<span class="badge bg-primary w-100 mt-2"><i class="bi bi-person"></i> Manual</span>'; }
-                    else { badgeModo = '<span class="badge bg-info text-dark w-100 mt-2"><i class="bi bi-robot"></i> Automático</span>'; }
-
-                    let htmlVuelos = "";
-
-                    if (reg.mejores && reg.mejores.length > 0) {
-                        htmlVuelos = '<div class="d-flex flex-wrap gap-2">';
-                        reg.mejores.forEach(v => {
-                            const link = v.enlace ? v.enlace : '#';
-                            const target = link !== '#' ? 'target="_blank"' : '';
-                            const cursor = link !== '#' ? 'cursor-pointer' : '';
-
-                            htmlVuelos += `
-                        <a href="${link}" ${target} class="text-decoration-none col-auto">
-                            <div class="flight-card shadow-sm h-100 ${cursor}">
-                                <div class="fw-bold text-light" style="font-size: 0.9rem;">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
-                                <div class="text-success fw-bold fs-6 my-1">${v.precio} €</div>
-                                <div class="small text-muted" style="font-size: 0.75rem;">${v.fecha}</div>
-                            </div>
-                        </a>`;
-                        });
-                        htmlVuelos += '</div>';
-                    }
-                    else if (reg.detalle && reg.detalle !== "") {
-                        htmlVuelos = `<span class="text-muted small">${reg.detalle}</span>`;
-                    }
-                    else {
-                        htmlVuelos = `<span class="text-muted small"><i class="bi bi-x-circle"></i> Ningún vuelo por debajo del presupuesto por persona fijado.</span>`;
-                    }
-
-                    const partesFecha = reg.fecha.split(' ');
-                    const dia = partesFecha[0];
-                    const hora = partesFecha[1] || '';
-
-                    tbody.innerHTML += `
-                <tr>
-                    <td class="text-center border-end border-secondary">
-                        <div class="fw-bold fs-6">${dia}</div>
-                        <div class="small text-muted">${hora}</div>
-                        ${badgeModo}
-                    </td>
-                    <td class="text-center">
-                        <span class="display-6 fw-bold text-light">${reg.vuelos_encontrados}</span><br>
-                        <small class="text-muted">vuelos</small>
-                    </td>
-                    <td class="p-3">
-                        ${htmlVuelos}
-                    </td>
-                </tr>`;
-                });
-            } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-4">Error al cargar la base de datos.</td></tr>';
-            }
-        });
-
-        document.getElementById('buscadorHistorial').addEventListener('keyup', function () {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#tablaHistorial tbody tr');
-            rows.forEach(row => { let text = row.textContent.toLowerCase(); row.style.display = text.includes(filter) ? '' : 'none'; });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
 </html>
