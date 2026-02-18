@@ -260,6 +260,26 @@ function initModalHistorial() {
             });
         });
     }
+
+    // Delete History
+    const btnBorrar = document.getElementById('btnBorrarHistorial');
+    if (btnBorrar) {
+        btnBorrar.addEventListener('click', async () => {
+            if (!confirm("⚠️ ¿Estás seguro de que quieres borrar TTODO el historial? No se puede deshacer.")) return;
+
+            try {
+                const res = await fetch('/api/borrar_historial', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    const tbody = document.querySelector('#tablaHistorial tbody');
+                    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-5"><i class="bi bi-journal-x fs-1 d-block mb-3"></i>La base de datos está vacía.</td></tr>';
+                }
+            } catch (e) {
+                alert("Error al borrar el historial.");
+            }
+        });
+    }
 }
 
 function renderHistorial(data, tbody) {

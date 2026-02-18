@@ -5,6 +5,7 @@ import urllib.parse
 import os
 import json
 from dotenv import load_dotenv
+import concurrent.futures
 
 load_dotenv()
 
@@ -43,6 +44,9 @@ def buscar_en_api(conf):
     fechas_ida = [f.strip() for f in conf["fechas_ida"].split(",") if f.strip()]
     fechas_vuelta = [f.strip() for f in conf["fechas_vuelta"].split(",")] if conf.get("fechas_vuelta") else []
 
+    # Preparar lista de tareas para ejecución paralela
+    tareas = []
+    
     for origen in origenes_lista:
         for destino in destinos_lista:
             for idx, f_ida in enumerate(fechas_ida):
@@ -58,64 +62,76 @@ def buscar_en_api(conf):
                     "adults": conf["pasajeros"],
                     "api_key": SERPAPI_KEY
                 }
-                if f_vuelta: params["return_date"] = f_vuelta
-                    
-                try:
-                    response = requests.get(url, params=params)
-                    data = response.json()
-                    if "error" in data: continue
-                    
-                    nivel_precio = "⚪ Normal"
-                    if "price_insights" in data:
-                        nivel = data["price_insights"].get("price_level", "")
-                        if nivel == "low": nivel_precio = "🟢 BARATO"
-                        elif nivel == "high": nivel_precio = "🔴 CARO"
-                        elif nivel == "typical": nivel_precio = "⚪ NORMAL"
-                        
-                    vuelos = data.get("best_flights", []) + data.get("other_flights", [])
-                    for vuelo in vuelos:
-                        precio_total = vuelo.get("price", 0)
-                        if not precio_total: continue
-                        precio_pp = precio_total / int(conf["pasajeros"])
-                        
-                        tramos = vuelo.get("flights", [])
-                        aerolinea = "Varias"
-                        logo = ""
-                        duracion_minutos = 0
-                        escalas = 0
+                if f_vuelta: params["return_date"] = f_vuelta  
+                
+                tareas.append((origen, destino, f_ida, f_vuelta, params))
 
-                        if tramos:
-                            aerolinea = tramos[0].get("airline", "Varias")
-                            logo = tramos[0].get("airline_logo", "")
-                            duracion_minutos = vuelo.get("total_duration", 0)
-                            
-                            # Calcular escalas (tramos - 1)
-                            escalas = len(tramos) - 1
+    def procesar_busqueda(tarea):
+        origen, destino, f_ida, f_vuelta, params = tarea
+        resultados_locales = []
+        try:
+            response = requests.get(url, params=params)
+            data = response.json()
+            if "error" in data: return []
+            
+            nivel_precio = "⚪ Normal"
+            if "price_insights" in data:
+                nivel = data["price_insights"].get("price_level", "")
+                if nivel == "low": nivel_precio = "🟢 BARATO"
+                elif nivel == "high": nivel_precio = "🔴 CARO"
+                elif nivel == "typical": nivel_precio = "⚪ NORMAL"
+                
+            vuelos = data.get("best_flights", []) + data.get("other_flights", [])
+            for vuelo in vuelos:
+                precio_total = vuelo.get("price", 0)
+                if not precio_total: continue
+                precio_pp = precio_total / int(conf["pasajeros"])
+                
+                tramos = vuelo.get("flights", [])
+                aerolinea = "Varias"
+                logo = ""
+                duracion_minutos = 0
+                escalas = 0
 
-                        # Formatear duración
-                        horas = duracion_minutos // 60
-                        minutos = duracion_minutos % 60
-                        duracion_fmt = f"{horas}h {minutos}m"
-                        
-                        query_vuelo = f"Vuelos desde {origen} a {destino} el {f_ida}"
-                        if f_vuelta: query_vuelo += f" y vuelta el {f_vuelta}"
-                        enlace_google = f"https://www.google.com/travel/flights?q={urllib.parse.quote(query_vuelo)}"
-                        
-                        resultados.append({
-                            "origen": origen, 
-                            "destino": destino, 
-                            "fecha_detectada": f_ida,
-                            "fecha_vuelta": f_vuelta if f_vuelta else "",
-                            "aerolinea": aerolinea, 
-                            "logo_aerolinea": logo,
-                            "duracion": duracion_fmt,
-                            "escalas": escalas,
-                            "precio_total": round(precio_total, 2),
-                            "precio_pp": round(precio_pp, 2), 
-                            "estado_precio": nivel_precio, 
-                            "enlace": enlace_google
-                        })
-                except Exception as e: print(f"Error procesando {origen}-{destino}: {e}")
+                if tramos:
+                    aerolinea = tramos[0].get("airline", "Varias")
+                    logo = tramos[0].get("airline_logo", "")
+                    duracion_minutos = vuelo.get("total_duration", 0)
+                    
+                    # Calcular escalas (tramos - 1)
+                    escalas = len(tramos) - 1
+
+                # Formatear duración
+                horas = duracion_minutos // 60
+                minutos = duracion_minutos % 60
+                duracion_fmt = f"{horas}h {minutos}m"
+                
+                query_vuelo = f"Vuelos desde {origen} a {destino} el {f_ida}"
+                if f_vuelta: query_vuelo += f" y vuelta el {f_vuelta}"
+                enlace_google = f"https://www.google.com/travel/flights?q={urllib.parse.quote(query_vuelo)}"
+                
+                resultados_locales.append({
+                    "origen": origen, 
+                    "destino": destino, 
+                    "fecha_detectada": f_ida,
+                    "fecha_vuelta": f_vuelta if f_vuelta else "",
+                    "aerolinea": aerolinea, 
+                    "logo_aerolinea": logo,
+                    "duracion": duracion_fmt,
+                    "escalas": escalas,
+                    "precio_total": round(precio_total, 2),
+                    "precio_pp": round(precio_pp, 2), 
+                    "estado_precio": nivel_precio, 
+                    "enlace": enlace_google
+                })
+        except Exception as e: print(f"Error procesando {origen}-{destino}: {e}")
+        return resultados_locales
+
+    # Ejecutar en paralelo (max 5 workers para no saturar si hay muchas tareas)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futuros = [executor.submit(procesar_busqueda, tarea) for tarea in tareas]
+        for futuro in concurrent.futures.as_completed(futuros):
+            resultados.extend(futuro.result())
                     
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
     return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
@@ -208,6 +224,12 @@ def ver_historial():
     if os.path.exists("historial.json"):
         with open("historial.json", 'r') as f: return jsonify(json.load(f))
     return jsonify([])
+
+@app.route('/api/borrar_historial', methods=['POST'])
+def borrar_historial():
+    if os.path.exists("historial.json"):
+        os.remove("historial.json")
+    return jsonify({"status": "success", "message": "Historial eliminado."})
 
 @app.route('/api/uso', methods=['GET'])
 def obtener_uso_api():
