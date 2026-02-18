@@ -392,6 +392,13 @@ function verDetalle(index) {
         // Fix: Show times if available
         const salida = formatHora(v.hora_salida) || "N/A";
         const llegada = formatHora(v.hora_llegada) || "N/A";
+
+        // Extract Arrival Date
+        let fechaLlegada = "N/A";
+        if (v.hora_llegada && v.hora_llegada.includes(" ")) {
+            fechaLlegada = v.hora_llegada.split(" ")[0];
+        }
+
         const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
 
         const col = document.createElement('div');
@@ -402,7 +409,10 @@ function verDetalle(index) {
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div>
                             <div class="fw-bold text-light fs-5">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
-                            <div class="small text-info mb-1"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="small text-info mb-1"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
+                                <div class="small text-info mb-1"><i class="bi bi-calendar-check"></i> Llegada: ${fechaLlegada}</div>
+                            </div>
                          </div>
                          <div class="fs-3 fw-bold text-success">${precio}€</div>
                     </div>
