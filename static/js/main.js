@@ -385,70 +385,68 @@ function verDetalle(index) {
 
     reg.mejores.forEach(v => {
         const precio = v.precio || v.precio_pp || 0;
-        const fecha = v.fecha || v.fecha_detectada || "N/A";
         const airline = v.aerolinea || "Varias";
         const link = v.enlace || "#";
         const duracion = v.duracion || "N/A";
-        // Fix: Show times if available
-        const salida = formatHora(v.hora_salida) || "N/A";
-        const llegada = formatHora(v.hora_llegada) || "N/A";
-
-        // Extract Arrival Date
-        let fechaLlegada = "N/A";
-        if (v.hora_llegada && v.hora_llegada.includes(" ")) {
-            fechaLlegada = v.hora_llegada.split(" ")[0];
-        }
-
-        // Return Date logic
-        let vueltaHtml = '';
-        if (v.fecha_vuelta) {
-            vueltaHtml = `<div class="small text-warning mb-1"><i class="bi bi-arrow-return-left"></i> Vuelta: ${v.fecha_vuelta}</div>`;
-        }
-
         const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
+
+        // Format Timestamps
+        const salidaFmt = formatFechaHora(v.hora_salida);
+        const llegadaFmt = formatFechaHora(v.hora_llegada);
+
+        // Trip Dates Summary
+        let fechasViaje = `<i class="bi bi-calendar-range me-2 text-info"></i> ${formatFechaCorta(v.fecha_detectada)}`;
+        if (v.fecha_vuelta) {
+            fechasViaje += ` <i class="bi bi-arrow-right mx-1 text-muted"></i> ${formatFechaCorta(v.fecha_vuelta)}`;
+        }
 
         const col = document.createElement('div');
         col.className = 'col-md-6';
         col.innerHTML = `
             <a href="${link}" target="_blank" class="d-block text-decoration-none h-100">
                 <div class="glass-card p-3 h-100 flight-card-detail">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                         <div>
-                            <div class="fw-bold text-light fs-5">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
-                            <div class="d-flex flex-column gap-1">
-                                <div class="d-flex gap-3">
-                                    <div class="small text-info"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
-                                    <div class="small text-info"><i class="bi bi-calendar-check"></i> Llegada: ${fechaLlegada}</div>
-                                </div>
-                                ${vueltaHtml}
-                            </div>
-                         </div>
-                         <div class="fs-3 fw-bold text-success">${precio}€</div>
-                    </div>
                     
-                    <div class="d-flex align-items-center mb-3 p-2 rounded bg-black bg-opacity-25">
-                        ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:24px; margin-right:10px;">` : '<i class="bi bi-airplane me-2"></i>'}
-                        <span class="text-light fw-bold">${airline}</span>
+                    <!-- Header: Route + Price -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                         <div class="fw-bold text-light fs-5">
+                            ${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}
+                         </div>
+                         <div class="fs-2 fw-bold text-success">${precio}€</div>
                     </div>
 
-                    <div class="row g-2 small text-muted">
-                        <div class="col-6">
-                            <i class="bi bi-clock-history text-primary"></i> <strong>Duración:</strong><br>
-                            ${duracion}
-                        </div>
-                         <div class="col-6">
-                            <i class="bi bi-bezier2 text-primary"></i> <strong>Escalas:</strong><br>
-                            ${escalasText}
-                        </div>
-                        <div class="col-6">
-                            <i class="bi bi-box-arrow-right text-primary"></i> <strong>Sale:</strong><br>
-                            ${salida}
-                        </div>
-                        <div class="col-6">
-                            <i class="bi bi-box-arrow-in-left text-primary"></i> <strong>Llega:</strong><br>
-                            ${llegada}
+                    <!-- Trip Summary (Fechas viaje) -->
+                    <div class="mb-3 p-2 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25">
+                        <div class="small text-uppercase text-primary fw-bold mb-1">Fechas del Viaje</div>
+                        <div class="text-light">${fechasViaje}</div>
+                    </div>
+                    
+                    <!-- Flight Specifics (Ida) -->
+                    <div class="p-2 rounded bg-black bg-opacity-25 mb-3">
+                        <div class="small text-uppercase text-muted fw-bold mb-2">Vuelo de Ida</div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="small text-muted d-block">🛫 Salida</label>
+                                <span class="text-light fw-bold">${salidaFmt}</span>
+                            </div>
+                            <div class="col-6">
+                                <label class="small text-muted d-block">🛬 Llegada</label>
+                                <span class="text-info fw-bold">${llegadaFmt}</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Airline & Info -->
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-25">
+                        <div class="d-flex align-items-center">
+                            ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:20px; margin-right:8px;" class="bg-white rounded p-1">` : '<i class="bi bi-airplane me-2"></i>'}
+                            <span class="small text-light">${airline}</span>
+                        </div>
+                        <div class="small text-muted text-end">
+                            <div><i class="bi bi-clock"></i> ${duracion}</div>
+                            <div><i class="bi bi-bezier2"></i> ${escalasText}</div>
+                        </div>
+                    </div>
+
                 </div>
             </a>
         `;
@@ -459,21 +457,28 @@ function verDetalle(index) {
     modalDetalle.show();
 }
 
-function formatHora(fechaStr) {
-    if (!fechaStr) return "";
-    // Expecting format "YYYY-MM-DD HH:MM" or similar
+// Helper: 2026-03-26 -> 26 mar
+function formatFechaCorta(dateStr) {
+    if (!dateStr) return "";
     try {
-        const parts = fechaStr.split(' ');
-        if (parts.length >= 2) {
-            // Check if it's a cross-day flight could be complex without comparing dates, 
-            // but for now user just wants the time.
-            return parts[1]; // Returns HH:MM
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    } catch { return dateStr; }
+}
+
+// Helper: 2026-03-26 20:20 -> 26 mar, 20:20
+function formatFechaHora(dateTimeStr) {
+    if (!dateTimeStr) return "N/A";
+    try {
+        // Handle "YYYY-MM-DD HH:MM"
+        const d = new Date(dateTimeStr);
+        if (isNaN(d.getTime())) {
+            return dateTimeStr;
         }
-        // If format is different, try generic Date parse
-        const d = new Date(fechaStr);
-        if (!isNaN(d.getTime())) {
-            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        }
-    } catch (e) { console.error(e); }
-    return fechaStr; // Fallback to original
+
+        const fecha = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        const hora = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        return `${fecha}, ${hora}`;
+    } catch { return dateTimeStr; }
 }
