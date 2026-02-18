@@ -300,18 +300,28 @@ function renderHistoryGrid(data) {
         let flightsHtml = '';
         if (reg.mejores && reg.mejores.length > 0) {
             reg.mejores.slice(0, 5).forEach(v => {
+                // Compatibility
+                const precio = v.precio || v.precio_pp || 0;
+                const fecha = v.fecha || v.fecha_detectada || "N/A";
+                const airline = v.aerolinea || "Varias";
+                const link = v.enlace || "#";
+
                 flightsHtml += `
-                    <a href="${v.enlace}" target="_blank" class="d-block text-decoration-none mb-2 p-2 rounded bg-white bg-opacity-10 flight-mini-card">
+                    <a href="${link}" target="_blank" class="d-block text-decoration-none mb-2 p-2 rounded bg-white bg-opacity-10 flight-mini-card">
                         <div class="d-flex justify-content-between">
                             <span class="text-light fw-bold small">${v.origen} <i class="bi bi-arrow-right"></i> ${v.destino}</span>
-                            <span class="text-success fw-bold">${v.precio_pp}€</span>
+                            <span class="text-success fw-bold">${precio}€</span>
                         </div>
-                        <div class="small text-muted">${v.fecha_detectada} | ${v.aerolinea}</div>
+                        <div class="small text-muted">${fecha} | ${airline}</div>
                     </a>
                  `;
             });
             if (reg.mejores.length > 5) {
-                flightsHtml += `<div class="text-center small text-muted fst-italic">+${reg.mejores.length - 5} vuelos más...</div>`;
+                flightsHtml += `
+                    <button class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="verDetalle(${historialGlobal.indexOf(reg)})">
+                        <i class="bi bi-plus-circle me-1"></i> Ver ${reg.mejores.length} vuelos
+                    </button>
+                `;
             }
         } else {
             flightsHtml = '<div class="text-muted small text-center py-3">Sin resultados relevantes</div>';
@@ -359,4 +369,46 @@ function filtrarHistorial() {
     });
 
     renderHistoryGrid(filtered);
+}
+
+function verDetalle(index) {
+    const reg = historialGlobal[index];
+    if (!reg || !reg.mejores) return;
+
+    const modalBody = document.getElementById('modalDetalleContent');
+    modalBody.innerHTML = '';
+
+    reg.mejores.forEach(v => {
+        const precio = v.precio || v.precio_pp || 0;
+        const fecha = v.fecha || v.fecha_detectada || "N/A";
+        const airline = v.aerolinea || "Varias";
+        const link = v.enlace || "#";
+        const duracion = v.duracion || "N/A";
+        const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
+
+        const col = document.createElement('div');
+        col.className = 'col-md-6';
+        col.innerHTML = `
+            <a href="${link}" target="_blank" class="d-block text-decoration-none h-100">
+                <div class="glass-card p-3 h-100 flight-card-detail">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                         <div>
+                            <div class="fw-bold text-light">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
+                            <div class="small text-info">${fecha}</div>
+                         </div>
+                         <div class="fs-4 fw-bold text-success">${precio}€</div>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:20px; margin-right:8px;">` : ''}
+                        <span class="small text-light">${airline}</span>
+                    </div>
+                    <div class="small text-muted"><i class="bi bi-clock"></i> ${duracion} • ${escalasText}</div>
+                </div>
+            </a>
+        `;
+        modalBody.appendChild(col);
+    });
+
+    const modalDetalle = new bootstrap.Modal(document.getElementById('modalDetalle'));
+    modalDetalle.show();
 }
