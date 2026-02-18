@@ -288,18 +288,25 @@ function renderHistorial(data, tbody) {
 
                 if (link !== '#') {
                     htmlVuelos += `
-                    <a href="${link}" target="_blank" class="text-decoration-none col-auto history-card-link">
-                        <div class="flight-card shadow-sm h-100">
-                            <div class="fw-bold text-light small">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
-                            <div class="text-success fw-bold fs-6 my-1">${precio} €</div>
-                            <div class="small text-muted" style="font-size: 0.7rem;">${fecha}</div>
+                    <a href="${link}" target="_blank" class="history-card-link flex-fill">
+                        <div class="flight-card h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-white bg-opacity-10 text-light border border-secondary border-opacity-25">${fecha}</span>
+                                <span class="text-success fw-bold">${precio} €</span>
+                            </div>
+                            <div class="fw-bold text-light small mb-1">
+                                ${v.origen} <i class="bi bi-arrow-right text-secondary mx-1"></i> ${v.destino}
+                            </div>
+                            <div class="small text-muted" style="font-size: 0.75rem;">
+                                ${v.aerolinea || 'Varias aerolíneas'}
+                            </div>
                         </div>
                     </a>`;
                 }
             });
             htmlVuelos += '</div>';
         } else {
-            htmlVuelos = `<span class="text-muted small"><i class="bi bi-x-circle opacity-50"></i> Ningún vuelo encontrado bajo el presupuesto.</span>`;
+            htmlVuelos = `<div class="text-center py-3 text-muted small"><i class="bi bi-x-circle opacity-50 d-block fs-4 mb-1"></i> Ningún vuelo encontrado bajo el presupuesto.</div>`;
         }
 
         const partesFecha = reg.fecha.split(' ');
@@ -312,16 +319,16 @@ function renderHistorial(data, tbody) {
         tr.className = `history-item ${modeClass}`;
 
         tr.innerHTML = `
-        <td class="text-center border-end border-secondary border-opacity-25 bg-black bg-opacity-10">
+        <td class="text-center align-middle p-3" style="width: 140px;">
             <div class="fw-bold fs-5 text-light">${dia}</div>
-            <div class="small text-muted font-monospace">${hora}</div>
+            <div class="small text-muted font-monospace mb-2">${hora}</div>
             ${badgeModo}
         </td>
-        <td class="text-center align-middle">
-            <span class="display-6 fw-bold ${reg.vuelos_encontrados > 0 ? "text-success" : "text-secondary"}">${reg.vuelos_encontrados}</span>
+        <td class="text-center align-middle p-3" style="width: 100px;">
+            <div class="display-6 fw-bold ${reg.vuelos_encontrados > 0 ? "text-success" : "text-secondary"}">${reg.vuelos_encontrados}</div>
             <div class="small text-uppercase tracking-wider text-muted" style="font-size: 0.7rem;">Vuelos</div>
         </td>
-        <td class="p-3 align-middle bg-black bg-opacity-10">
+        <td class="p-3 align-middle">
             ${htmlVuelos}
         </td>`;
 

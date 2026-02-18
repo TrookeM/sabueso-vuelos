@@ -39,7 +39,12 @@ body {
 }
 
 /* Typography & Icons */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-weight: 700;
     letter-spacing: -0.5px;
 }
@@ -51,7 +56,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Custom Inputs */
-.form-control, .form-select {
+.form-control,
+.form-select {
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid var(--glass-border);
     color: white;
@@ -59,7 +65,8 @@ h1, h2, h3, h4, h5, h6 {
     padding: 10px 15px;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     background: rgba(0, 0, 0, 0.5);
     border-color: var(--primary-color);
     box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.1);
@@ -106,25 +113,35 @@ h1, h2, h3, h4, h5, h6 {
     --bs-table-bg: transparent;
     --bs-table-color: white;
     border-collapse: separate;
-    border-spacing: 0 10px; /* Space between rows */
+    border-spacing: 0 10px;
+    /* Space between rows */
 }
 
 .table-custom tbody tr {
     background: rgba(255, 255, 255, 0.03);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: all 0.2s;
-    border-radius: 10px; /* Note: requires specific display handling or pseudo elements to work perfectly on tr */
+    border-radius: 10px;
+    /* Note: requires specific display handling or pseudo elements to work perfectly on tr */
 }
 
-.table-custom tbody tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
-.table-custom tbody tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+.table-custom tbody tr td:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+
+.table-custom tbody tr td:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
 
 .table-custom tbody tr:hover {
     background: rgba(255, 255, 255, 0.08);
     transform: scale(1.01);
 }
 
-.table-custom td, .table-custom th {
+.table-custom td,
+.table-custom th {
     border: none;
     vertical-align: middle;
     padding: 15px;
@@ -156,9 +173,17 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @keyframes float {
-    0% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(5deg); }
-    100% { transform: translateY(0px) rotate(0deg); }
+    0% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-20px) rotate(5deg);
+    }
+
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
 }
 
 /* Flight Details in Table */
@@ -193,5 +218,63 @@ h1, h2, h3, h4, h5, h6 {
     border-left: 4px solid var(--secondary-color);
 }
 
-.history-item.manual { border-color: var(--primary-color); }
-.history-item.explorer { border-color: var(--accent-color); }
+.history-item.manual {
+    border-color: var(--primary-color);
+}
+
+.history-item.explorer {
+    border-color: var(--accent-color);
+}
+
+/* Flight Cards in History */
+.flight-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px;
+    min-width: 160px;
+    transition: all 0.2s ease;
+}
+
+.flight-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.history-card-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.history-card-link:hover {
+    color: inherit;
+}
+
+/* History Modal Tweaks */
+#tablaHistorial {
+    border-collapse: separate;
+    border-spacing: 0 15px;
+}
+
+#tablaHistorial tbody tr {
+    background: rgba(0, 0, 0, 0.2);
+    box-shadow: none;
+    /* Reset default table shadow for history specifically if needed */
+}
+
+#tablaHistorial td {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#tablaHistorial td:first-child {
+    border-left: 4px solid;
+    /* Keep the color indicator */
+    border-radius: 8px 0 0 8px;
+}
+
+#tablaHistorial td:last-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 0 8px 8px 0;
+}
