@@ -107,7 +107,19 @@ def buscar_en_api(conf):
                     try:
                         hora_salida = tramos[0].get("departure_airport", {}).get("time", "")
                         hora_llegada = tramos[-1].get("arrival_airport", {}).get("time", "")
-                    except: pass
+                        
+                        # Fallback for alternative keys
+                        dep_airport = tramos[0].get("departure_airport", {})
+                        if not hora_salida and "departure_time" in dep_airport:
+                             hora_salida = dep_airport["departure_time"]
+                             
+                        arr_airport = tramos[-1].get("arrival_airport", {})
+                        if not hora_llegada and "arrival_time" in arr_airport:
+                             hora_llegada = arr_airport["arrival_time"]
+                        
+                    except Exception as e:
+                        print(f"Error extracting times: {e}")
+                        pass
 
                 # Formatear duración
                 horas = duracion_minutos // 60
