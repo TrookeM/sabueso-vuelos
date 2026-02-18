@@ -220,138 +220,143 @@ function mostrarAlerta(msg, type) {
 }
 
 /* =========================================
-   HISTORY MODAL
+   HISTORY PAGE & LOGIC
    ========================================= */
-function initModalHistorial() {
-    const modalHistorial = document.getElementById('modalHistorial');
-    if (!modalHistorial) return;
+function initHistorialPage() {
+    cargarHistorialCompleto();
 
-    modalHistorial.addEventListener('show.bs.modal', async () => {
-        const tbody = document.querySelector('#tablaHistorial tbody');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Cargando base de datos...</p></td></tr>';
+    // Filters
+    const searchInput = document.getElementById('filterSearch');
+    const modeSelect = document.getElementById('filterMode');
+    const priceRange = document.getElementById('filterPrice');
+    const priceVal = document.getElementById('priceVal');
 
-        try {
-            const res = await fetch('/api/historial');
-            const data = await res.json();
-
-            if (tbody) {
-                tbody.innerHTML = '';
-                if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-5"><i class="bi bi-journal-x fs-1 d-block mb-3"></i>La base de datos está vacía.</td></tr>';
-                    return;
-                }
-
-                renderHistorial(data, tbody);
-            }
-        } catch (e) {
-            if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center text-danger py-4">Error al cargar la base de datos.</td></tr>';
-        }
-    });
-
-    // Search filter
-    const searchInput = document.getElementById('buscadorHistorial');
-    if (searchInput) {
-        searchInput.addEventListener('keyup', function () {
-            let filter = this.value.toLowerCase();
-            let rows = document.querySelectorAll('#tablaHistorial tbody tr');
-            rows.forEach(row => {
-                let text = row.textContent.toLowerCase();
-                row.style.display = text.includes(filter) ? '' : 'none';
-            });
+    if (priceRange) {
+        priceRange.addEventListener('input', (e) => {
+            priceVal.textContent = e.target.value > 0 ? `< ${e.target.value}€` : "Indiferente";
+            filtrarHistorial();
         });
     }
 
-    // Delete History
-    const btnBorrar = document.getElementById('btnBorrarHistorial');
+    [searchInput, modeSelect].forEach(el => {
+        if (el) el.addEventListener('input', filtrarHistorial);
+    });
+
+    // Delete
+    const btnBorrar = document.getElementById('btnBorrarHistorialPage');
     if (btnBorrar) {
         btnBorrar.addEventListener('click', async () => {
-            if (!confirm("⚠️ ¿Estás seguro de que quieres borrar TTODO el historial? No se puede deshacer.")) return;
-
+            if (!confirm("⚠️ ¿Estás seguro de que quieres BORRAR TODO el historial?")) return;
             try {
-                const res = await fetch('/api/borrar_historial', { method: 'POST' });
-                const data = await res.json();
-
-                if (data.status === 'success') {
-                    const tbody = document.querySelector('#tablaHistorial tbody');
-                    if (tbody) tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-5"><i class="bi bi-journal-x fs-1 d-block mb-3"></i>La base de datos está vacía.</td></tr>';
-                }
-            } catch (e) {
-                alert("Error al borrar el historial.");
-            }
+                await fetch('/api/borrar_historial', { method: 'POST' });
+                location.reload();
+            } catch (e) { alert("Error al borrar."); }
         });
     }
 }
 
-function renderHistorial(data, tbody) {
+let historialGlobal = [];
+
+async function cargarHistorialCompleto() {
+    const container = document.getElementById('historyContainer');
+    const loader = document.getElementById('loadingHistory');
+    const empty = document.getElementById('emptyState');
+
+    try {
+        const res = await fetch('/api/historial');
+        historialGlobal = await res.json();
+
+        if (loader) loader.classList.add('d-none');
+
+        if (historialGlobal.length === 0) {
+            if (empty) empty.classList.remove('d-none');
+            return;
+        }
+
+        renderHistoryGrid(historialGlobal);
+        if (container) container.classList.remove('d-none');
+
+    } catch (e) {
+        if (loader) loader.innerHTML = '<p class="text-danger">Error cargando datos.</p>';
+        console.error(e);
+    }
+}
+
+function renderHistoryGrid(data) {
+    const container = document.getElementById('historyContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
     data.forEach(reg => {
-        let badgeModo = "";
-        const modoFinal = reg.modo || (reg.detalle && reg.detalle.includes("EXPLORADOR") ? "EXPLORADOR" : "Desconocido");
+        const col = document.createElement('div');
+        col.className = 'col-xl-4 col-md-6 history-card-wrapper';
 
-        if (modoFinal.includes("EXPLORADOR")) {
-            badgeModo = '<span class="badge bg-warning text-dark w-100 mt-2"><i class="bi bi-globe-americas"></i> Explorador</span>';
-        } else if (modoFinal.includes("Manual")) {
-            badgeModo = '<span class="badge bg-primary w-100 mt-2"><i class="bi bi-person"></i> Manual</span>';
-        } else {
-            badgeModo = '<span class="badge bg-info text-dark w-100 mt-2"><i class="bi bi-robot"></i> Automático (Cron)</span>';
-        }
+        const modo = reg.modo || "Desconocido";
+        let badgeClass = "bg-secondary";
+        if (modo.includes("EXPLORADOR")) badgeClass = "bg-warning text-dark";
+        else if (modo.includes("Manual")) badgeClass = "bg-primary";
+        else badgeClass = "bg-info text-dark";
 
-        let htmlVuelos = "";
-
+        let flightsHtml = '';
         if (reg.mejores && reg.mejores.length > 0) {
-            htmlVuelos = '<div class="d-flex flex-wrap gap-2">';
-            reg.mejores.forEach(v => {
-                const link = v.enlace ? v.enlace : '#';
-
-                // Compatibility with old format vs new format
-                const precio = v.precio || v.precio_pp;
-                const fecha = v.fecha || v.fecha_detectada;
-
-                if (link !== '#') {
-                    htmlVuelos += `
-                    <a href="${link}" target="_blank" class="history-card-link flex-fill">
-                        <div class="flight-card h-100">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="badge bg-white bg-opacity-10 text-light border border-secondary border-opacity-25">${fecha}</span>
-                                <span class="text-success fw-bold">${precio} €</span>
-                            </div>
-                            <div class="fw-bold text-light small mb-1">
-                                ${v.origen} <i class="bi bi-arrow-right text-secondary mx-1"></i> ${v.destino}
-                            </div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">
-                                ${v.aerolinea || 'Varias aerolíneas'}
-                            </div>
+            reg.mejores.slice(0, 5).forEach(v => {
+                flightsHtml += `
+                    <a href="${v.enlace}" target="_blank" class="d-block text-decoration-none mb-2 p-2 rounded bg-white bg-opacity-10 flight-mini-card">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-light fw-bold small">${v.origen} <i class="bi bi-arrow-right"></i> ${v.destino}</span>
+                            <span class="text-success fw-bold">${v.precio_pp}€</span>
                         </div>
-                    </a>`;
-                }
+                        <div class="small text-muted">${v.fecha_detectada} | ${v.aerolinea}</div>
+                    </a>
+                 `;
             });
-            htmlVuelos += '</div>';
+            if (reg.mejores.length > 5) {
+                flightsHtml += `<div class="text-center small text-muted fst-italic">+${reg.mejores.length - 5} vuelos más...</div>`;
+            }
         } else {
-            htmlVuelos = `<div class="text-center py-3 text-muted small"><i class="bi bi-x-circle opacity-50 d-block fs-4 mb-1"></i> Ningún vuelo encontrado bajo el presupuesto.</div>`;
+            flightsHtml = '<div class="text-muted small text-center py-3">Sin resultados relevantes</div>';
         }
 
-        const partesFecha = reg.fecha.split(' ');
-        const dia = partesFecha[0];
-        const hora = partesFecha[1] || '';
+        col.innerHTML = `
+            <div class="glass-card h-100 p-0 overflow-hidden d-flex flex-column">
+                <div class="p-3 border-bottom border-secondary border-opacity-25 bg-black bg-opacity-25 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold text-light">${reg.fecha}</div>
+                        <span class="badge ${badgeClass} small">${modo}</span>
+                    </div>
+                    <div class="text-end">
+                        <div class="display-6 fw-bold text-light">${reg.vuelos_encontrados}</div>
+                        <div class="small text-muted text-uppercase">Vuelos</div>
+                    </div>
+                </div>
+                <div class="p-3 flex-grow-1">
+                    ${flightsHtml}
+                </div>
+            </div>
+        `;
 
-        const tr = document.createElement('tr');
-        // Add class for styling border based on mode
-        const modeClass = modoFinal.includes("EXPLORADOR") ? "explorer" : (modoFinal.includes("Manual") ? "manual" : "auto");
-        tr.className = `history-item ${modeClass}`;
-
-        tr.innerHTML = `
-        <td class="text-center align-middle p-3" style="width: 140px;">
-            <div class="fw-bold fs-5 text-light">${dia}</div>
-            <div class="small text-muted font-monospace mb-2">${hora}</div>
-            ${badgeModo}
-        </td>
-        <td class="text-center align-middle p-3" style="width: 100px;">
-            <div class="display-6 fw-bold ${reg.vuelos_encontrados > 0 ? "text-success" : "text-secondary"}">${reg.vuelos_encontrados}</div>
-            <div class="small text-uppercase tracking-wider text-muted" style="font-size: 0.7rem;">Vuelos</div>
-        </td>
-        <td class="p-3 align-middle">
-            ${htmlVuelos}
-        </td>`;
-
-        tbody.appendChild(tr);
+        container.appendChild(col);
     });
+}
+
+function filtrarHistorial() {
+    const term = document.getElementById('filterSearch').value.toLowerCase();
+    const mode = document.getElementById('filterMode').value;
+    const priceMax = parseInt(document.getElementById('filterPrice').value) || 0;
+
+    const filtered = historialGlobal.filter(reg => {
+        const textMatch = JSON.stringify(reg).toLowerCase().includes(term);
+        const modeMatch = mode === 'all' || (reg.modo && reg.modo.includes(mode));
+        let priceMatch = true;
+        if (priceMax > 0) {
+            if (reg.mejores && reg.mejores.length > 0) {
+                priceMatch = reg.mejores.some(v => parseFloat(v.precio_pp) <= priceMax);
+            } else {
+                priceMatch = false;
+            }
+        }
+        return textMatch && modeMatch && priceMatch;
+    });
+
+    renderHistoryGrid(filtered);
 }

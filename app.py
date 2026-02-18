@@ -257,5 +257,9 @@ def trigger_del_cron():
     tarea_en_segundo_plano()
     return jsonify({"status": "Batida automática ejecutada con éxito"})
 
+@app.route('/historial')
+def historial_page():
+    return render_template('historial.html')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
