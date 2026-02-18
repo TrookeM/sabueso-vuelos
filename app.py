@@ -92,6 +92,8 @@ def buscar_en_api(conf):
                 logo = ""
                 duracion_minutos = 0
                 escalas = 0
+                hora_salida = ""
+                hora_llegada = ""
 
                 if tramos:
                     aerolinea = tramos[0].get("airline", "Varias")
@@ -100,6 +102,12 @@ def buscar_en_api(conf):
                     
                     # Calcular escalas (tramos - 1)
                     escalas = len(tramos) - 1
+                    
+                    # Intentar extraer horas
+                    try:
+                        hora_salida = tramos[0].get("departure_airport", {}).get("time", "")
+                        hora_llegada = tramos[-1].get("arrival_airport", {}).get("time", "")
+                    except: pass
 
                 # Formatear duración
                 horas = duracion_minutos // 60
@@ -119,6 +127,8 @@ def buscar_en_api(conf):
                     "logo_aerolinea": logo,
                     "duracion": duracion_fmt,
                     "escalas": escalas,
+                    "hora_salida": hora_salida,
+                    "hora_llegada": hora_llegada,
                     "precio_total": round(precio_total, 2),
                     "precio_pp": round(precio_pp, 2), 
                     "estado_precio": nivel_precio, 
