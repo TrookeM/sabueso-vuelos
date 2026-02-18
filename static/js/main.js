@@ -405,6 +405,8 @@ function verDetalle(index) {
             vueltaHtml = `<div class="small text-warning mb-1"><i class="bi bi-arrow-return-left"></i> Vuelta: ${v.fecha_vuelta}</div>`;
         }
 
+        const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
+
         const col = document.createElement('div');
         col.className = 'col-md-6';
         col.innerHTML = `
