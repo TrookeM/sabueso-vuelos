@@ -399,7 +399,11 @@ function verDetalle(index) {
             fechaLlegada = v.hora_llegada.split(" ")[0];
         }
 
-        const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
+        // Return Date logic
+        let vueltaHtml = '';
+        if (v.fecha_vuelta) {
+            vueltaHtml = `<div class="small text-warning mb-1"><i class="bi bi-arrow-return-left"></i> Vuelta: ${v.fecha_vuelta}</div>`;
+        }
 
         const col = document.createElement('div');
         col.className = 'col-md-6';
@@ -409,9 +413,12 @@ function verDetalle(index) {
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div>
                             <div class="fw-bold text-light fs-5">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
-                            <div class="d-flex flex-wrap gap-3">
-                                <div class="small text-info mb-1"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
-                                <div class="small text-info mb-1"><i class="bi bi-calendar-check"></i> Llegada: ${fechaLlegada}</div>
+                            <div class="d-flex flex-column gap-1">
+                                <div class="d-flex gap-3">
+                                    <div class="small text-info"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
+                                    <div class="small text-info"><i class="bi bi-calendar-check"></i> Llegada: ${fechaLlegada}</div>
+                                </div>
+                                ${vueltaHtml}
                             </div>
                          </div>
                          <div class="fs-3 fw-bold text-success">${precio}€</div>
