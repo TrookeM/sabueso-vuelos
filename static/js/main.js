@@ -390,8 +390,8 @@ function verDetalle(index) {
         const link = v.enlace || "#";
         const duracion = v.duracion || "N/A";
         // Fix: Show times if available
-        const salida = v.hora_salida || "N/A";
-        const llegada = v.hora_llegada || "N/A";
+        const salida = formatHora(v.hora_salida) || "N/A";
+        const llegada = formatHora(v.hora_llegada) || "N/A";
         const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
 
         const col = document.createElement('div');
@@ -438,4 +438,23 @@ function verDetalle(index) {
 
     const modalDetalle = new bootstrap.Modal(document.getElementById('modalDetalle'));
     modalDetalle.show();
+}
+
+function formatHora(fechaStr) {
+    if (!fechaStr) return "";
+    // Expecting format "YYYY-MM-DD HH:MM" or similar
+    try {
+        const parts = fechaStr.split(' ');
+        if (parts.length >= 2) {
+            // Check if it's a cross-day flight could be complex without comparing dates, 
+            // but for now user just wants the time.
+            return parts[1]; // Returns HH:MM
+        }
+        // If format is different, try generic Date parse
+        const d = new Date(fechaStr);
+        if (!isNaN(d.getTime())) {
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    } catch (e) { console.error(e); }
+    return fechaStr; // Fallback to original
 }
