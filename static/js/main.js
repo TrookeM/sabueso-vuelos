@@ -358,11 +358,16 @@ function filtrarHistorial() {
         const textMatch = JSON.stringify(reg).toLowerCase().includes(term);
         const modeMatch = mode === 'all' || (reg.modo && reg.modo.includes(mode));
         let priceMatch = true;
+
         if (priceMax > 0) {
             if (reg.mejores && reg.mejores.length > 0) {
-                priceMatch = reg.mejores.some(v => parseFloat(v.precio_pp) <= priceMax);
+                // Fix: Check both precio_pp and precio (compatibility with old records)
+                priceMatch = reg.mejores.some(v => {
+                    const p = v.precio_pp || v.precio || 0;
+                    return parseFloat(p) <= priceMax;
+                });
             } else {
-                priceMatch = false;
+                priceMatch = false; // If no flights, it doesn't match a price filter
             }
         }
         return textMatch && modeMatch && priceMatch;
@@ -384,6 +389,9 @@ function verDetalle(index) {
         const airline = v.aerolinea || "Varias";
         const link = v.enlace || "#";
         const duracion = v.duracion || "N/A";
+        // Fix: Show times if available
+        const salida = v.hora_salida || "N/A";
+        const llegada = v.hora_llegada || "N/A";
         const escalasText = v.escalas === 0 ? "Directo" : (v.escalas ? `${v.escalas} escalas` : "N/A");
 
         const col = document.createElement('div');
@@ -393,16 +401,35 @@ function verDetalle(index) {
                 <div class="glass-card p-3 h-100 flight-card-detail">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                          <div>
-                            <div class="fw-bold text-light">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
-                            <div class="small text-info">${fecha}</div>
+                            <div class="fw-bold text-light fs-5">${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}</div>
+                            <div class="small text-info mb-1"><i class="bi bi-calendar-event"></i> Salida: ${fecha}</div>
                          </div>
-                         <div class="fs-4 fw-bold text-success">${precio}€</div>
+                         <div class="fs-3 fw-bold text-success">${precio}€</div>
                     </div>
-                    <div class="d-flex align-items-center mb-2">
-                        ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:20px; margin-right:8px;">` : ''}
-                        <span class="small text-light">${airline}</span>
+                    
+                    <div class="d-flex align-items-center mb-3 p-2 rounded bg-black bg-opacity-25">
+                        ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:24px; margin-right:10px;">` : '<i class="bi bi-airplane me-2"></i>'}
+                        <span class="text-light fw-bold">${airline}</span>
                     </div>
-                    <div class="small text-muted"><i class="bi bi-clock"></i> ${duracion} • ${escalasText}</div>
+
+                    <div class="row g-2 small text-muted">
+                        <div class="col-6">
+                            <i class="bi bi-clock-history text-primary"></i> <strong>Duración:</strong><br>
+                            ${duracion}
+                        </div>
+                         <div class="col-6">
+                            <i class="bi bi-bezier2 text-primary"></i> <strong>Escalas:</strong><br>
+                            ${escalasText}
+                        </div>
+                        <div class="col-6">
+                            <i class="bi bi-box-arrow-right text-primary"></i> <strong>Sale:</strong><br>
+                            ${salida}
+                        </div>
+                        <div class="col-6">
+                            <i class="bi bi-box-arrow-in-left text-primary"></i> <strong>Llega:</strong><br>
+                            ${llegada}
+                        </div>
+                    </div>
                 </div>
             </a>
         `;
