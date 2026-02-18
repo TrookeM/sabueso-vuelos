@@ -109,7 +109,8 @@ def guardar_historial(vuelos, modo="Estándar"):
                 "origen": v['origen'],
                 "destino": v['destino'],
                 "fecha": v['fecha_detectada'],
-                "precio": v['precio_pp']
+                "precio": v['precio_pp'],
+                "enlace": v.get('enlace', '#')
             })
             
         registro = {

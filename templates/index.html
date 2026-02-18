@@ -297,12 +297,18 @@
                     if (reg.mejores && reg.mejores.length > 0) {
                         htmlVuelos = '<div class="d-flex flex-wrap gap-2">';
                         reg.mejores.forEach(v => {
+                            const link = v.enlace ? v.enlace : '#';
+                            const target = link !== '#' ? 'target="_blank"' : '';
+                            const cursor = link !== '#' ? 'cursor-pointer' : '';
+
                             htmlVuelos += `
-                        <div class="flight-card shadow-sm">
-                            <div class="fw-bold text-light" style="font-size: 0.9rem;">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
-                            <div class="text-success fw-bold fs-6 my-1">${v.precio} €</div>
-                            <div class="small text-muted" style="font-size: 0.75rem;">${v.fecha}</div>
-                        </div>`;
+                        <a href="${link}" ${target} class="text-decoration-none col-auto">
+                            <div class="flight-card shadow-sm h-100 ${cursor}">
+                                <div class="fw-bold text-light" style="font-size: 0.9rem;">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
+                                <div class="text-success fw-bold fs-6 my-1">${v.precio} €</div>
+                                <div class="small text-muted" style="font-size: 0.75rem;">${v.fecha}</div>
+                            </div>
+                        </a>`;
                         });
                         htmlVuelos += '</div>';
                     }
