@@ -78,3 +78,11 @@ Esto permite iterar y mejorar la herramienta en segundos sin acceder manualmente
 ├── config.json          # (Generado automáticamente) Persistencia de configuración
 ├── historial.json       # (Generado automáticamente) Base de datos de búsquedas
 └── requirements.txt     # Dependencias de Python
+
+### 3️⃣ Pequeño detalle final (requirements.txt)
+Por si acaso no lo tienes actualizado, ejecuta esto en tu terminal antes de subirlo todo, para que el archivo `requirements.txt` tenga exactamente lo que usa tu proyecto:
+
+```bash
+pip freeze > requirements.txt
+
+Desarrollado con ❤️ y café como proyecto personal de aprendizaje.
