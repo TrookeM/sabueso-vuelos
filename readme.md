@@ -85,5 +85,5 @@ Por si acaso no lo tienes actualizado, ejecuta esto en tu terminal antes de subi
 
 ```bash
 pip freeze > requirements.txt
-
+```
 Desarrollado con ❤️ y café como proyecto personal de aprendizaje.
