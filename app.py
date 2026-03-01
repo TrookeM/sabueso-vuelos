@@ -166,52 +166,70 @@ def guardar_historial(vuelos, modo="Estándar"):
 # LÓGICA DEL CRON INTELIGENTE (DOBLE TURNO)
 # ==========================================================
 def tarea_en_segundo_plano():
-    # 1. Cargar configuración actual
-    if not config.get("origenes") or not config.get("destinos"):
-        print("⚠️ Cron abortado: Configuración incompleta.")
-        return
+    # 1. Cargar configuración
+    if not config.get("origenes") or not config.get("destinos"): return
 
-    # 2. Preparar listas limpias
+    # 2. Listas maestras (Limpiamos espacios)
     origenes_raw = [o.strip().upper() for o in config["origenes"].split(",") if o.strip()]
     destinos_raw = [d.strip().upper() for d in config["destinos"].split(",") if d.strip()]
+    fechas_ida_raw = [f.strip() for f in config["fechas_ida"].split(",") if f.strip()]
+    # Las vueltas pueden tener huecos, hay que tratarlas con cuidado
+    fechas_vuelta_raw = config.get("fechas_vuelta", "").split(",") 
+
+    # VALIDACIÓN: Si el número de destinos no coincide con el de fechas, algo va mal
+    # (Por eso es importante crear una tarjeta por cada fecha distinta)
+    if len(destinos_raw) != len(fechas_ida_raw):
+        print("⚠️ Error: Desajuste entre destinos y fechas. Usa una tarjeta por viaje.")
+        # Fallback: Usar lógica antigua si hay desajuste
+        min_len = min(len(destinos_raw), len(fechas_ida_raw))
+    else:
+        min_len = len(destinos_raw)
+
+    print(f"[{datetime.datetime.now()}] 🧠 Smart Rotation (Modo Tarjetas)...")
+
+    # 3. MATEMÁTICA DE ROTACIÓN (Total combinaciones = Origenes x Tarjetas de Viaje)
+    total_viajes = min_len # Número de tarjetas
+    total_combos = len(origenes_raw) * total_viajes
     
-    if not origenes_raw or not destinos_raw: return
-
-    print(f"[{datetime.datetime.now()}] 🧠 Ejecutando Smart Rotation (Doble Turno)...")
-
-    # 3. MATEMÁTICA DE ROTACIÓN
     dia_anio = datetime.datetime.now().timetuple().tm_yday
-    total_combos = len(origenes_raw) * len(destinos_raw)
     
-    # Calculamos 2 índices para hoy (Turno A y Turno B)
-    indices_hoy = [
-        (dia_anio) % total_combos,         
-        (dia_anio + 1) % total_combos      
-    ]
+    # Doble turno diario
+    indices_hoy = [dia_anio % total_combos, (dia_anio + 1) % total_combos]
     
     url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     rutas_revisadas = []
-    
-    # 4. EJECUTAR LOS 2 TURNOS
+
+    # 4. EJECUCIÓN
     for idx in indices_hoy:
+        # Calcular qué Origen y qué Tarjeta (Viaje) toca
         idx_origen = idx % len(origenes_raw)
-        idx_destino = (idx // len(origenes_raw)) % len(destinos_raw)
+        idx_viaje = (idx // len(origenes_raw)) % total_viajes
         
         origen_hoy = origenes_raw[idx_origen]
-        destino_hoy = destinos_raw[idx_destino]
+        destino_hoy = destinos_raw[idx_viaje]
+        fecha_ida_hoy = fechas_ida_raw[idx_viaje]
         
-        rutas_revisadas.append(f"{origen_hoy} ➡️ {destino_hoy}")
+        # Intentar sacar la fecha de vuelta correspondiente (si existe)
+        fecha_vuelta_hoy = ""
+        if idx_viaje < len(fechas_vuelta_raw):
+            fecha_vuelta_hoy = fechas_vuelta_raw[idx_viaje]
+
+        rutas_revisadas.append(f"{origen_hoy} ➔ {destino_hoy} ({fecha_ida_hoy})")
         
-        # Configuración temporal "quirúrgica"
-        config_smart = config.copy()
-        config_smart["origenes"] = origen_hoy
-        config_smart["destinos"] = destino_hoy
+        # Configuración "Quirúrgica": Solo mandamos 1 destino y sus fechas exactas
+        config_smart = {
+            "origenes": origen_hoy,
+            "destinos": destino_hoy,
+            "fechas_ida": fecha_ida_hoy,
+            "fechas_vuelta": fecha_vuelta_hoy,
+            "pasajeros": config["pasajeros"],
+            "precio_maximo_pp": config["precio_maximo_pp"]
+        }
         
-        # Búsqueda
+        # Ejecutar Búsqueda
         vuelos = buscar_en_api(config_smart)
         guardar_historial(vuelos, f"Auto: {origen_hoy}-{destino_hoy}")
         
-        # Notificación si hay éxito
         if isinstance(vuelos, list) and len(vuelos) > 0:
             mensaje = f"🚨 <b>¡CHOLLO: {origen_hoy} ✈️ {destino_hoy}!</b> 🚨\n\n"
             for v in vuelos[:3]:
@@ -220,17 +238,14 @@ def tarea_en_segundo_plano():
                 mensaje += f"🔗 <a href='{v['enlace']}'>Ver vuelo</a>\n\n"
             requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
 
-    # 5. MENSAJE DE VIDA (Resumen del día)
-    mensaje_vida = f"✅ <b>Sabueso Inteligente (Reporte):</b>\n\n"
-    mensaje_vida += f"Hoy he completado el turno doble:\n"
-    mensaje_vida += f"1️⃣ {rutas_revisadas[0]}\n"
-    mensaje_vida += f"2️⃣ {rutas_revisadas[1]}\n\n"
-    mensaje_vida += f"Sin chollos por debajo de {config['precio_maximo_pp']}€ (por persona). Mañana rotaré objetivos. 🫡"
+    # 5. REPORTE DE VIDA
+    mensaje_vida = f"✅ <b>Sabueso (Modo Tarjetas):</b>\n\n"
+    mensaje_vida += f"Hoy he revisado:\n1️⃣ {rutas_revisadas[0]}\n2️⃣ {rutas_revisadas[1]}\n\n"
+    mensaje_vida += f"Seguimos buscando bajo {config['precio_maximo_pp']}€. 🫡"
     
-    # Solo enviamos el reporte de vida si no se encontraron vuelos (para no saturar)
-    # Si prefieres recibirlo siempre, quita el 'if' de abajo.
-    requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje_vida, "parse_mode": "HTML"})
-
+    # Enviar reporte solo si no se encontraron vuelos para no saturar
+    if not any(isinstance(v, list) and len(v) > 0 for v in [buscar_en_api(config)]): 
+         requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje_vida, "parse_mode": "HTML"})
 
 # ==========================================================
 # RUTAS FLASK
