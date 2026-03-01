@@ -305,5 +305,51 @@ def trigger_del_cron():
 @app.route('/historial')
 def historial_page(): return render_template('historial.html')
 
+# ==========================================================
+# NUEVA RUTA: CALCULAR FUTURAS BATIDAS
+# ==========================================================
+@app.route('/api/proximas_batidas', methods=['GET'])
+def get_proximas_batidas():
+    # 1. Verificar configuración
+    if not config.get("origenes") or not config.get("destinos"):
+        return jsonify([])
+
+    origenes = [o.strip().upper() for o in config["origenes"].split(",") if o.strip()]
+    destinos = [d.strip().upper() for d in config["destinos"].split(",") if d.strip()]
+    
+    if not origenes or not destinos: return jsonify([])
+
+    total_combos = len(origenes) * len(destinos)
+    # Obtenemos el día actual del año (ej: 48)
+    dia_actual = datetime.datetime.now().timetuple().tm_yday
+    
+    calendario = []
+    
+    # 2. Calcular HOY (offset 0), MAÑANA (1) y PASADO (2)
+    for offset in range(3):
+        dia_simulado = dia_actual + offset
+        
+        # La misma lógica matemática que el Cron:
+        indices = [
+            (dia_simulado) % total_combos,
+            (dia_simulado + 1) % total_combos
+        ]
+        
+        rutas_dia = []
+        for idx in indices:
+            idx_origen = idx % len(origenes)
+            idx_destino = (idx // len(origenes)) % len(destinos)
+            rutas_dia.append(f"{origenes[idx_origen]} ➔ {destinos[idx_destino]}")
+            
+        # Crear etiquetas amigables
+        etiqueta = "HOY" if offset == 0 else ("MAÑANA" if offset == 1 else "PASADO")
+        
+        calendario.append({
+            "dia": etiqueta,
+            "rutas": rutas_dia
+        })
+        
+    return jsonify(calendario)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)

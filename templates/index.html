@@ -5,20 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✈️ Radar Multi-Destino | Premium</title>
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- SIDEBAR -->
+            
             <div class="col-lg-3 col-md-4 d-none d-md-block sidebar glass">
                 <div class="text-center mb-5 mt-3">
                     <h2 class="fw-bold text-gradient"><i class="bi bi-radar"></i> SABUESO</h2>
@@ -44,6 +40,18 @@
                     </div>
                 </div>
 
+                <div class="glass-card mb-4 p-3">
+                    <h6 class="text-uppercase text-info small fw-bold mb-3">
+                        <i class="bi bi-calendar-range me-2"></i> Plan de Vuelo
+                    </h6>
+                    <div id="cronogramaList">
+                        <div class="text-center py-2">
+                            <div class="spinner-border spinner-border-sm text-secondary"></div>
+                            <small class="d-block text-muted mt-2">Calculando rotación...</small>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="mt-auto">
                     <a href="/historial" class="btn btn-outline-light w-100 mb-3">
                         <i class="bi bi-clock-history me-2"></i> Historial de Batidas
@@ -52,19 +60,17 @@
                 </div>
             </div>
 
-            <!-- MAIN CONTENT -->
             <div class="col-lg-9 col-md-8 p-4">
-                <!-- Mobile Header -->
+                
                 <div class="d-md-none d-flex justify-content-between align-items-center mb-4 glass p-3">
                     <h4 class="m-0 text-gradient"><i class="bi bi-radar"></i> Sabueso</h4>
-                    <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal"
-                        data-bs-target="#modalHistorial">
+                    <a href="/historial" class="btn btn-sm btn-outline-light">
                         <i class="bi bi-clock-history"></i>
-                    </button>
+                    </a>
                 </div>
 
                 <div class="row g-4">
-                    <!-- CONFIGURATION PANEL -->
+                    
                     <div class="col-xl-4 col-lg-12">
                         <div class="glass-card h-100">
                             <h4 class="mb-4 text-light"><i class="bi bi-sliders"></i> Configuración</h4>
@@ -73,72 +79,62 @@
                                 <div class="mb-3">
                                     <label class="form-label small text-muted text-uppercase fw-bold">Orígenes</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-transparent border-secondary text-light"><i
-                                                class="bi bi-geo-alt"></i></span>
-                                        <input type="text" class="form-control" id="origenes"
-                                            value="{{ config.origenes }}" placeholder="MAD, BCN">
+                                        <span class="input-group-text bg-transparent border-secondary text-light"><i class="bi bi-geo-alt"></i></span>
+                                        <input type="text" class="form-control" id="origenes" value="{{ config.origenes }}" placeholder="MAD, BCN">
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
                                     <label class="form-label small text-muted text-uppercase fw-bold">Destinos</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-transparent border-secondary text-light"><i
-                                                class="bi bi-pin-map"></i></span>
-                                        <input type="text" class="form-control" id="destinos"
-                                            value="{{ config.destinos }}" placeholder="TOK, NYC">
+                                        <span class="input-group-text bg-transparent border-secondary text-light"><i class="bi bi-pin-map"></i></span>
+                                        <input type="text" class="form-control" id="destinos" value="{{ config.destinos }}" placeholder="KTT, RVN, KEF">
                                     </div>
                                 </div>
 
                                 <div class="row mb-3">
                                     <div class="col-6">
                                         <label class="form-label small text-muted text-uppercase fw-bold">Salida</label>
-                                        <input type="text" class="form-control" id="fechas_ida"
-                                            value="{{ config.fechas_ida }}" placeholder="YYYY-MM-DD">
+                                        <input type="text" class="form-control" id="fechas_ida" value="{{ config.fechas_ida }}" placeholder="YYYY-MM-DD">
                                     </div>
                                     <div class="col-6">
-                                        <label
-                                            class="form-label small text-muted text-uppercase fw-bold">Regreso</label>
-                                        <input type="text" class="form-control" id="fechas_vuelta"
-                                            value="{{ config.fechas_vuelta }}" placeholder="Opcional">
+                                        <label class="form-label small text-muted text-uppercase fw-bold">Regreso</label>
+                                        <input type="text" class="form-control" id="fechas_vuelta" value="{{ config.fechas_vuelta }}" placeholder="Opcional">
                                     </div>
                                 </div>
 
                                 <div class="row mb-4">
                                     <div class="col-6">
                                         <label class="form-label small text-muted text-uppercase fw-bold">Pax</label>
-                                        <input type="number" class="form-control" id="pasajeros"
-                                            value="{{ config.pasajeros }}">
+                                        <input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}">
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label small text-warning fw-bold text-uppercase">Max
-                                            €</label>
-                                        <input type="number" class="form-control border-warning text-warning"
-                                            id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
+                                        <label class="form-label small text-warning fw-bold text-uppercase">Max €</label>
+                                        <input type="number" class="form-control border-warning text-warning" id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
                                     </div>
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>
-                                        Guardar Cambios</button>
-                                    <button type="button" id="btnBuscar" class="btn btn-success"><i
-                                            class="bi bi-search me-2"></i> Buscar Ahora</button>
-                                    <button type="button" id="btnExplorar" class="btn btn-dorado mt-2"><i
-                                            class="bi bi-globe-europe-africa me-2"></i> Modo EXPLORADOR</button>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-save me-2"></i> Guardar Cambios
+                                    </button>
+                                    <button type="button" id="btnBuscar" class="btn btn-success">
+                                        <i class="bi bi-search me-2"></i> Buscar Ahora
+                                    </button>
+                                    <button type="button" id="btnExplorar" class="btn btn-dorado mt-2">
+                                        <i class="bi bi-globe-europe-africa me-2"></i> Modo EXPLORADOR
+                                    </button>
                                 </div>
                             </form>
                             <div id="alertMsg" class="d-none"></div>
                         </div>
                     </div>
 
-                    <!-- RESULTS PANEL -->
                     <div class="col-xl-8 col-lg-12">
                         <div class="glass-card h-100 d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h4 class="m-0 text-light"><i class="bi bi-airplane-engines"></i> Resultados del Radar
-                                </h4>
-                                <span class="badge bg-secondary bg-opacity-25 border border-secondary text-light">En
-                                    tiempo real</span>
+                                <h4 class="m-0 text-light"><i class="bi bi-airplane-engines"></i> Resultados del Radar</h4>
+                                <span class="badge bg-secondary bg-opacity-25 border border-secondary text-light">En tiempo real</span>
                             </div>
 
                             <div id="loading" class="loader-container d-none">
@@ -169,15 +165,22 @@
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 
-
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+             // Si no usas main.js externo, asegúrate de que la función cargarCronograma() esté disponible
+             if(typeof cargarCronograma === 'function') {
+                 cargarCronograma();
+             }
+        });
+    </script>
 </body>
-
 </html>
