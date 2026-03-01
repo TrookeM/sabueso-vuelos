@@ -325,46 +325,48 @@ def historial_page(): return render_template('historial.html')
 # ==========================================================
 @app.route('/api/proximas_batidas', methods=['GET'])
 def get_proximas_batidas():
-    # 1. Verificar configuración
+    # 1. Validar configuración
     if not config.get("origenes") or not config.get("destinos"):
         return jsonify([])
 
     origenes = [o.strip().upper() for o in config["origenes"].split(",") if o.strip()]
     destinos = [d.strip().upper() for d in config["destinos"].split(",") if d.strip()]
+    fechas = [f.strip() for f in config["fechas_ida"].split(",") if f.strip()]
     
-    if not origenes or not destinos: return jsonify([])
+    # Si hay desajuste entre destinos y fechas, cortamos por lo sano
+    min_len = min(len(destinos), len(fechas))
+    if not origenes or min_len == 0: return jsonify([])
 
-    total_combos = len(origenes) * len(destinos)
-    # Obtenemos el día actual del año (ej: 48)
+    # Total de "Tarjetas" (Viajes únicos configurados)
+    total_viajes = min_len 
+    total_combos = len(origenes) * total_viajes
+    
     dia_actual = datetime.datetime.now().timetuple().tm_yday
     
     calendario = []
     
-    # 2. Calcular HOY (offset 0), MAÑANA (1) y PASADO (2)
+    # 2. Calcular HOY, MAÑANA y PASADO con la lógica de TARJETAS
     for offset in range(3):
         dia_simulado = dia_actual + offset
         
-        # La misma lógica matemática que el Cron:
-        indices = [
-            (dia_simulado) % total_combos,
-            (dia_simulado + 1) % total_combos
-        ]
+        # Doble turno
+        indices = [(dia_simulado) % total_combos, (dia_simulado + 1) % total_combos]
         
         rutas_dia = []
         for idx in indices:
             idx_origen = idx % len(origenes)
-            idx_destino = (idx // len(origenes)) % len(destinos)
-            rutas_dia.append(f"{origenes[idx_origen]} ➔ {destinos[idx_destino]}")
+            idx_viaje = (idx // len(origenes)) % total_viajes
             
-        # Crear etiquetas amigables
+            # Cogemos el destino y SU fecha correspondiente
+            d = destinos[idx_viaje]
+            f = fechas[idx_viaje]
+            
+            # Formato visual para la web
+            rutas_dia.append(f"{origenes[idx_origen]} ➔ {d} ({f})")
+            
         etiqueta = "HOY" if offset == 0 else ("MAÑANA" if offset == 1 else "PASADO")
-        
-        calendario.append({
-            "dia": etiqueta,
-            "rutas": rutas_dia
-        })
+        calendario.append({"dia": etiqueta, "rutas": rutas_dia})
         
     return jsonify(calendario)
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
