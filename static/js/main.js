@@ -2,8 +2,72 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarUsoAPI();
     initCalculadora();
     initForms();
-    initModalHistorial();
+    
+    // NUEVO: Cargar el Plan de Vuelo Inteligente
+    cargarCronograma();
+    
+    // Solo inicializar historial si existe el contenedor (evita errores en index)
+    if (document.getElementById('historyContainer')) {
+        initHistorialPage();
+    }
 });
+
+/* =========================================
+   NUEVO: PLAN DE VUELO (ROTACIÓN)
+   ========================================= */
+async function cargarCronograma() {
+    const container = document.getElementById('cronogramaList');
+    if (!container) return; // Si no estamos en index, salimos
+
+    try {
+        const res = await fetch('/api/proximas_batidas');
+        
+        // Si el servidor aún no tiene la ruta (Python sin reiniciar), dará error
+        if (!res.ok) throw new Error("API no disponible");
+        
+        const data = await res.json();
+        
+        if (data.length === 0) {
+            container.innerHTML = '<small class="text-muted d-block text-center py-2">Faltan datos en Configuración.</small>';
+            return;
+        }
+
+        let html = '';
+        data.forEach(item => {
+            // Estilos: Verde brillante para HOY, Gris transparente para el futuro
+            const isHoy = item.dia === "HOY";
+            const borderClass = isHoy ? "border-success bg-success bg-opacity-10" : "border-secondary border-opacity-25 bg-black bg-opacity-25";
+            const textClass = isHoy ? "text-success fw-bold" : "text-muted";
+            const badge = isHoy ? '<span class="badge bg-success shadow-sm" style="font-size: 0.55rem;">EN CURSO</span>' : '';
+
+            // Protección por si falta alguna ruta en el array
+            const ruta1 = item.rutas[0] || "Sin datos";
+            const ruta2 = item.rutas[1] || "Sin datos";
+
+            html += `
+            <div class="mb-2 p-2 rounded border ${borderClass}" style="transition: all 0.3s;">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small ${textClass}" style="font-size: 0.75rem; letter-spacing: 1px;">${item.dia}</span>
+                    ${badge}
+                </div>
+                <div class="d-flex flex-column gap-1">
+                    <div class="d-flex align-items-center text-light small">
+                        <i class="bi bi-airplane me-2 opacity-50" style="font-size: 0.7rem;"></i> ${ruta1}
+                    </div>
+                    <div class="d-flex align-items-center text-light small">
+                        <i class="bi bi-airplane me-2 opacity-50" style="font-size: 0.7rem;"></i> ${ruta2}
+                    </div>
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error("Error cargando cronograma:", e);
+        container.innerHTML = '<small class="text-danger d-block text-center">Error al conectar.</small>';
+    }
+}
 
 /* =========================================
    API USAGE & CALCULATOR
@@ -100,6 +164,9 @@ function initForms() {
                 });
                 const result = await res.json();
                 mostrarAlerta(result.message, 'success');
+                // Recargar componentes tras guardar
+                initCalculadora();
+                cargarCronograma();
             } catch (error) {
                 mostrarAlerta("Error al conectar con el servidor", 'danger');
             } finally {
@@ -287,13 +354,14 @@ function renderHistoryGrid(data) {
     if (!container) return;
     container.innerHTML = '';
 
-    data.forEach(reg => {
+    data.forEach((reg, index) => {
         const col = document.createElement('div');
         col.className = 'col-xl-4 col-md-6 history-card-wrapper';
 
         const modo = reg.modo || "Desconocido";
         let badgeClass = "bg-secondary";
         if (modo.includes("EXPLORADOR")) badgeClass = "bg-warning text-dark";
+        else if (modo.includes("Auto")) badgeClass = "bg-success"; 
         else if (modo.includes("Manual")) badgeClass = "bg-primary";
         else badgeClass = "bg-info text-dark";
 
@@ -318,7 +386,7 @@ function renderHistoryGrid(data) {
             });
             if (reg.mejores.length > 5) {
                 flightsHtml += `
-                    <button class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="verDetalle(${historialGlobal.indexOf(reg)})">
+                    <button class="btn btn-sm btn-outline-secondary w-100 mt-2" onclick="verDetalle(${index})">
                         <i class="bi bi-plus-circle me-1"></i> Ver ${reg.mejores.length} vuelos
                     </button>
                 `;
@@ -361,13 +429,12 @@ function filtrarHistorial() {
 
         if (priceMax > 0) {
             if (reg.mejores && reg.mejores.length > 0) {
-                // Fix: Check both precio_pp and precio (compatibility with old records)
                 priceMatch = reg.mejores.some(v => {
                     const p = v.precio_pp || v.precio || 0;
                     return parseFloat(p) <= priceMax;
                 });
             } else {
-                priceMatch = false; // If no flights, it doesn't match a price filter
+                priceMatch = false; 
             }
         }
         return textMatch && modeMatch && priceMatch;
@@ -406,7 +473,6 @@ function verDetalle(index) {
             <a href="${link}" target="_blank" class="d-block text-decoration-none h-100">
                 <div class="glass-card p-3 h-100 flight-card-detail">
                     
-                    <!-- Header: Route + Price -->
                     <div class="d-flex justify-content-between align-items-center mb-3">
                          <div class="fw-bold text-light fs-5">
                             ${v.origen} <i class="bi bi-arrow-right text-primary"></i> ${v.destino}
@@ -414,13 +480,11 @@ function verDetalle(index) {
                          <div class="fs-2 fw-bold text-success">${precio}€</div>
                     </div>
 
-                    <!-- Trip Summary (Fechas viaje) -->
                     <div class="mb-3 p-2 rounded bg-primary bg-opacity-10 border border-primary border-opacity-25">
                         <div class="small text-uppercase text-primary fw-bold mb-1">Fechas del Viaje</div>
                         <div class="text-light">${fechasViaje}</div>
                     </div>
                     
-                    <!-- Flight Specifics (Ida) -->
                     <div class="p-2 rounded bg-black bg-opacity-25 mb-3">
                         <div class="small text-uppercase text-muted fw-bold mb-2">Vuelo de Ida</div>
                         <div class="row g-2">
@@ -435,7 +499,6 @@ function verDetalle(index) {
                         </div>
                     </div>
 
-                    <!-- Airline & Info -->
                     <div class="d-flex justify-content-between align-items-center pt-2 border-top border-secondary border-opacity-25">
                         <div class="d-flex align-items-center">
                             ${v.logo_aerolinea ? `<img src="${v.logo_aerolinea}" style="height:20px; margin-right:8px;" class="bg-white rounded p-1">` : '<i class="bi bi-airplane me-2"></i>'}
