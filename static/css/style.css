@@ -278,3 +278,14 @@ h6 {
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 0 8px 8px 0;
 }
+
+.dashed-border {
+    border-style: dashed !important;
+    border-width: 2px !important;
+    opacity: 0.7;
+    transition: all 0.2s;
+}
+.dashed-border:hover {
+    opacity: 1;
+    background-color: rgba(13, 202, 240, 0.1);
+}
