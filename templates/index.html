@@ -14,7 +14,7 @@
 <body>
     <div class="container-fluid">
         <div class="row">
-            
+
             <div class="col-lg-3 col-md-4 d-none d-md-block sidebar glass">
                 <div class="text-center mb-5 mt-3">
                     <h2 class="fw-bold text-gradient"><i class="bi bi-radar"></i> SABUESO</h2>
@@ -26,6 +26,14 @@
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <span class="small text-light">Estado API</span>
                         <span id="apiUso" class="badge bg-secondary">...</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-muted">Última ejecución</span>
+                        <div class="text-end">
+                            <span id="gastoEjecucion" class="badge bg-warning text-dark"
+                                style="font-size:0.65rem;">—</span>
+                            <div id="gastoModo" class="text-muted" style="font-size:0.6rem;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -49,53 +57,66 @@
             </div>
 
             <div class="col-lg-9 col-md-8 p-4">
-                
+
                 <div class="row g-4">
-                    
+
                     <div class="col-xl-5 col-lg-12">
                         <div class="glass-card h-100">
                             <h4 class="mb-4 text-light"><i class="bi bi-sliders"></i> Configuración</h4>
 
                             <form id="configForm">
                                 <div class="mb-4">
-                                    <label class="form-label small text-muted text-uppercase fw-bold">📍 Orígenes (Desde dónde vuelas)</label>
+                                    <label class="form-label small text-muted text-uppercase fw-bold">📍 Orígenes (Desde
+                                        dónde vuelas)</label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-transparent border-secondary text-light"><i class="bi bi-geo-alt"></i></span>
-                                        <input type="text" class="form-control" id="origenes" value="{{ config.origenes }}" placeholder="MAD, BCN">
+                                        <span class="input-group-text bg-transparent border-secondary text-light"><i
+                                                class="bi bi-geo-alt"></i></span>
+                                        <input type="text" class="form-control" id="origenes"
+                                            value="{{ config.origenes }}" placeholder="MAD, BCN">
                                     </div>
                                     <div class="form-text text-muted small">Aplica a todos los viajes.</div>
                                 </div>
 
-                                <label class="form-label small text-muted text-uppercase fw-bold mb-2">✈️ Tus Destinos y Fechas</label>
+                                <label class="form-label small text-muted text-uppercase fw-bold mb-2">✈️ Tus Destinos y
+                                    Fechas</label>
                                 <div id="listaViajes" class="d-flex flex-column gap-3 mb-3">
-                                    </div>
+                                </div>
 
-                                <button type="button" class="btn btn-outline-info w-100 mb-4 dashed-border" onclick="agregarTarjetaViaje()">
+                                <button type="button" class="btn btn-outline-info w-100 mb-4 dashed-border"
+                                    onclick="agregarTarjetaViaje()">
                                     <i class="bi bi-plus-circle me-2"></i> Añadir Nuevo Destino
                                 </button>
 
-                                <div class="row mb-4 p-3 rounded bg-black bg-opacity-25 border border-secondary border-opacity-25 mx-0">
+                                <div
+                                    class="row mb-4 p-3 rounded bg-black bg-opacity-25 border border-secondary border-opacity-25 mx-0">
                                     <div class="col-6">
-                                        <label class="form-label small text-muted text-uppercase fw-bold">Pasajeros</label>
-                                        <input type="number" class="form-control" id="pasajeros" value="{{ config.pasajeros }}">
+                                        <label
+                                            class="form-label small text-muted text-uppercase fw-bold">Pasajeros</label>
+                                        <input type="number" class="form-control" id="pasajeros"
+                                            value="{{ config.pasajeros }}">
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label small text-warning fw-bold text-uppercase">Max €</label>
-                                        <input type="number" class="form-control border-warning text-warning" id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
+                                        <label class="form-label small text-warning fw-bold text-uppercase">Max
+                                            €</label>
+                                        <input type="number" class="form-control border-warning text-warning"
+                                            id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
                                     </div>
                                 </div>
 
                                 <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i> Guardar Todo</button>
-                                    <button type="button" id="btnBuscar" class="btn btn-success"><i class="bi bi-search me-2"></i> Buscar Manual</button>
-                                    <button type="button" id="btnExplorar" class="btn btn-dorado mt-2"><i class="bi bi-globe-europe-africa me-2"></i> Modo EXPLORADOR</button>
+                                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-2"></i>
+                                        Guardar Todo</button>
+                                    <button type="button" id="btnBuscar" class="btn btn-success"><i
+                                            class="bi bi-search me-2"></i> Buscar Manual</button>
+                                    <button type="button" id="btnExplorar" class="btn btn-dorado mt-2"><i
+                                            class="bi bi-globe-europe-africa me-2"></i> Modo EXPLORADOR</button>
                                 </div>
-                                
+
                                 <input type="hidden" id="destinos_hidden" value="{{ config.destinos }}">
                                 <input type="hidden" id="fechas_ida_hidden" value="{{ config.fechas_ida }}">
                                 <input type="hidden" id="fechas_vuelta_hidden" value="{{ config.fechas_vuelta }}">
                             </form>
-                            
+
                             <div id="alertMsg" class="d-none"></div>
                         </div>
                     </div>
@@ -104,7 +125,8 @@
                         <div class="glass-card h-100 d-flex flex-column">
                             <div class="d-flex justify-content-between align-items-center mb-4">
                                 <h4 class="m-0 text-light"><i class="bi bi-airplane-engines"></i> Radar en Vivo</h4>
-                                <span class="badge bg-secondary bg-opacity-25 border border-secondary text-light">Realtime</span>
+                                <span
+                                    class="badge bg-secondary bg-opacity-25 border border-secondary text-light">Realtime</span>
                             </div>
 
                             <div id="loading" class="loader-container d-none">
@@ -118,7 +140,7 @@
                                         <tr class="text-muted small text-uppercase">
                                             <th>Ruta / Fecha</th>
                                             <th>Aerolínea</th>
-                                            <th class="text-end">Precio</th>
+                                            <th class="text-end">Precio / pers.</th>
                                             <th class="text-end">Link</th>
                                         </tr>
                                     </thead>
@@ -142,4 +164,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>

@@ -37,6 +37,9 @@ def cargar_configuracion():
 
 config = cargar_configuracion()
 
+# Variable global para registrar el gasto de la última ejecución
+ultimo_gasto = {"llamadas": 0, "modo": "", "fecha": ""}
+
 def buscar_en_api(conf):
     if not conf.get("origenes") or not conf.get("destinos") or not conf.get("fechas_ida"):
         return {"error": True, "mensaje": "⚠️ Faltan datos en la configuración."}
@@ -140,9 +143,9 @@ def buscar_en_api(conf):
             resultados.extend(futuro.result())
                     
     resultados_filtrados = [r for r in resultados if r["precio_pp"] <= float(conf["precio_maximo_pp"])]
-    return sorted(resultados_filtrados, key=lambda x: x["precio_pp"])
+    return sorted(resultados_filtrados, key=lambda x: x["precio_pp"]), len(tareas)
 
-def guardar_historial(vuelos, modo="Estándar"):
+def guardar_historial(vuelos, modo="Estándar", llamadas=0):
     if isinstance(vuelos, dict) and vuelos.get("error"): return
     historial = []
     if os.path.exists(HISTORIAL_FILE):
@@ -154,6 +157,7 @@ def guardar_historial(vuelos, modo="Estándar"):
         "id": datetime.datetime.now().strftime("%Y%m%d%H%M%S"),
         "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "modo": modo,
+        "llamadas_api": llamadas,
         "vuelos_encontrados": len(vuelos) if isinstance(vuelos, list) else 0,
         "mejores": vuelos[:10] if isinstance(vuelos, list) else [] 
     }
@@ -227,8 +231,12 @@ def tarea_en_segundo_plano():
         print(f"🔎 Buscando: {origen_hoy}-{destino_hoy} ({fecha_ida_hoy})...")
         
         # BUSCAR EN API
-        vuelos = buscar_en_api(config_smart)
-        guardar_historial(vuelos, f"Auto: {origen_hoy}-{destino_hoy}")
+        resultado = buscar_en_api(config_smart)
+        if isinstance(resultado, tuple):
+            vuelos, llamadas = resultado
+        else:
+            vuelos, llamadas = resultado, 0
+        guardar_historial(vuelos, f"Auto: {origen_hoy}-{destino_hoy}", llamadas)
         
         # === CORRECCIÓN AQUÍ: ENVÍO A TELEGRAM ===
         if isinstance(vuelos, list) and len(vuelos) > 0:
@@ -284,20 +292,32 @@ def guardar_config():
 
 @app.route('/api/buscar', methods=['GET'])
 def buscar_ahora():
+    global ultimo_gasto
     # Búsqueda Manual: Usa la configuración COMPLETA (sin rotación)
-    vuelos = buscar_en_api(config)
-    guardar_historial(vuelos, "Manual")
-    return jsonify(vuelos)
+    resultado = buscar_en_api(config)
+    if isinstance(resultado, tuple):
+        vuelos, llamadas = resultado
+    else:
+        vuelos, llamadas = resultado, 0
+    ultimo_gasto = {"llamadas": llamadas, "modo": "Manual", "fecha": datetime.datetime.now().strftime("%H:%M")}
+    guardar_historial(vuelos, "Manual", llamadas)
+    return jsonify({"vuelos": vuelos, "gasto": llamadas, "modo": "Manual"})
 
 @app.route('/api/explorar', methods=['GET'])
 def explorar_ahora():
+    global ultimo_gasto
     if not config.get("origenes") or not config.get("fechas_ida"):
         return jsonify({"error": True, "mensaje": "⚠️ Configura Origen y Fecha Ida primero."})
 
     conf_exp = config.copy()
     conf_exp["destinos"] = DESTINOS_EXPLORADOR
-    vuelos = buscar_en_api(conf_exp)
-    guardar_historial(vuelos, "EXPLORADOR")
+    resultado = buscar_en_api(conf_exp)
+    if isinstance(resultado, tuple):
+        vuelos, llamadas = resultado
+    else:
+        vuelos, llamadas = resultado, 0
+    ultimo_gasto = {"llamadas": llamadas, "modo": "Explorador", "fecha": datetime.datetime.now().strftime("%H:%M")}
+    guardar_historial(vuelos, "EXPLORADOR", llamadas)
     
     if isinstance(vuelos, list) and len(vuelos) > 0:
         chollos = [v for v in vuelos if "🟢" in v.get('estado_precio', '')]
@@ -308,7 +328,11 @@ def explorar_ahora():
                 mensaje += f"🔗 <a href='{v['enlace']}'>Ver</a>\n"
             requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML", "disable_web_page_preview": True})
 
-    return jsonify(vuelos)
+    return jsonify({"vuelos": vuelos, "gasto": llamadas, "modo": "Explorador"})
+
+@app.route('/api/ultimo_gasto', methods=['GET'])
+def get_ultimo_gasto():
+    return jsonify(ultimo_gasto)
 
 @app.route('/api/historial', methods=['GET'])
 def ver_historial():

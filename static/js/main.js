@@ -1,11 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     cargarUsoAPI();
-    
+    cargarUltimoGasto();
+
     // 1. INICIALIZAR EL SISTEMA DE TARJETAS
     initCardSystem();
-    
+
     cargarCronograma();
-    
+
     if (document.getElementById('historyContainer')) {
         initHistorialPage();
     }
@@ -20,16 +21,16 @@ function initCardSystem() {
     const btnExplorar = document.getElementById('btnExplorar');
 
     // A. LEER DATOS DE LOS INPUTS OCULTOS (JINJA)
-    const destinosRaw = document.getElementById('destinos_hidden')?.value || ""; 
-    const fechasIdaRaw = document.getElementById('fechas_ida_hidden')?.value || ""; 
-    const fechasVueltaRaw = document.getElementById('fechas_vuelta_hidden')?.value || ""; 
+    const destinosRaw = document.getElementById('destinos_hidden')?.value || "";
+    const fechasIdaRaw = document.getElementById('fechas_ida_hidden')?.value || "";
+    const fechasVueltaRaw = document.getElementById('fechas_vuelta_hidden')?.value || "";
 
     const listaDestinos = destinosRaw.split(',').filter(x => x.trim());
     const listaIdas = fechasIdaRaw.split(',').filter(x => x.trim());
     const listaVueltas = fechasVueltaRaw.split(','); // Mantenemos vacíos para sincronizar índices
 
     const container = document.getElementById('listaViajes');
-    if(container) container.innerHTML = '';
+    if (container) container.innerHTML = '';
 
     // B. CREAR TARJETAS VISUALES
     if (listaDestinos.length > 0) {
@@ -86,10 +87,10 @@ function initCardSystem() {
                 });
                 const result = await res.json();
                 mostrarAlerta(result.message, 'success');
-                
+
                 // Actualizar inputs ocultos por si acaso
                 document.getElementById('destinos_hidden').value = data.destinos;
-                
+
                 cargarCronograma(); // Refrescar el plan de vuelo
             } catch (error) {
                 mostrarAlerta("Error al conectar con el servidor", 'danger');
@@ -102,8 +103,8 @@ function initCardSystem() {
 
     if (btnBuscar) {
         btnBuscar.addEventListener('click', () => {
-             alert("💡 Nota: Se buscará usando la configuración GUARDADA.");
-             ejecutarBusqueda('/api/buscar', "Rastreando tus viajes...");
+            alert("💡 Nota: Se buscará usando la configuración GUARDADA.");
+            ejecutarBusqueda('/api/buscar', "Rastreando tus viajes...");
         });
     }
 
@@ -118,8 +119,8 @@ function initCardSystem() {
 // FUNCIÓN: CREAR HTML DE UNA TARJETA
 function agregarTarjetaViaje(destino = "", ida = "", vuelta = "") {
     const container = document.getElementById('listaViajes');
-    if(!container) return;
-    
+    if (!container) return;
+
     const id = Date.now() + Math.random(); // ID único
 
     const html = `
@@ -151,7 +152,7 @@ function agregarTarjetaViaje(destino = "", ida = "", vuelta = "") {
         </div>
     </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', html);
 }
 
@@ -178,7 +179,13 @@ async function ejecutarBusqueda(endpoint, loadingMsg) {
     try {
         const res = await fetch(endpoint);
         const data = await res.json();
-        renderTabla(data);
+        // El backend ahora devuelve { vuelos, gasto, modo } en lugar de un array plano
+        const vuelos = Array.isArray(data) ? data : (data.vuelos || data);
+        renderTabla(vuelos);
+        // Actualizar gasto en telemetría
+        if (data.gasto !== undefined) {
+            actualizarGasto(data.gasto, data.modo);
+        }
     } catch (error) {
         console.error(error);
         if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Error de conexión.</td></tr>`;
@@ -205,7 +212,7 @@ function renderTabla(data) {
     data.forEach(v => {
         const tr = document.createElement('tr');
         const badgeColor = v.estado_precio.includes("BARATO") ? "success" : "light text-dark";
-        
+
         tr.innerHTML = `
             <td>
                 <div class="flight-route fw-bold small">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
@@ -219,6 +226,7 @@ function renderTabla(data) {
             </td>
             <td class="text-end">
                 <div class="fw-bold text-success">${v.precio_pp}€</div>
+                <div class="text-muted" style="font-size:0.65rem;">por persona</div>
             </td>
             <td class="text-end">
                 <a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.7rem;">Ver</a>
@@ -230,13 +238,13 @@ function renderTabla(data) {
 
 async function cargarCronograma() {
     const container = document.getElementById('cronogramaList');
-    if (!container) return; 
+    if (!container) return;
 
     try {
         const res = await fetch('/api/proximas_batidas');
         if (!res.ok) throw new Error("API off");
         const data = await res.json();
-        
+
         if (data.length === 0) {
             container.innerHTML = '<small class="text-muted d-block text-center py-2">Sin viajes configurados.</small>';
             return;
@@ -247,7 +255,7 @@ async function cargarCronograma() {
             const isHoy = item.dia === "HOY";
             const borderClass = isHoy ? "border-success bg-success bg-opacity-10" : "border-secondary border-opacity-25 bg-black bg-opacity-25";
             const textClass = isHoy ? "text-success fw-bold" : "text-muted";
-            
+
             html += `
             <div class="mb-2 p-2 rounded border ${borderClass}">
                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -268,15 +276,35 @@ async function cargarCronograma() {
 
 async function cargarUsoAPI() {
     const badgeUso = document.getElementById('apiUso');
-    if(!badgeUso) return;
+    if (!badgeUso) return;
     try {
         const res = await fetch('/api/uso');
         const data = await res.json();
-        if(!data.error) {
+        if (!data.error) {
             badgeUso.textContent = `${data.usado} / ${data.limite}`;
             badgeUso.className = data.usado > 200 ? "badge bg-danger" : "badge bg-info text-dark";
         }
-    } catch(e) { badgeUso.textContent = "?"; }
+    } catch (e) { badgeUso.textContent = "?"; }
+}
+
+async function cargarUltimoGasto() {
+    try {
+        const res = await fetch('/api/ultimo_gasto');
+        const data = await res.json();
+        if (data.llamadas > 0) {
+            actualizarGasto(data.llamadas, data.modo, data.fecha);
+        }
+    } catch (e) { }
+}
+
+function actualizarGasto(llamadas, modo, hora) {
+    const elGasto = document.getElementById('gastoEjecucion');
+    const elModo = document.getElementById('gastoModo');
+    if (elGasto) elGasto.textContent = `-${llamadas} créditos`;
+    if (elModo) {
+        const horaStr = hora ? ` · ${hora}` : '';
+        elModo.textContent = `${modo || ''}${horaStr}`;
+    }
 }
 
 function mostrarAlerta(msg, type) {
@@ -297,18 +325,18 @@ function initHistorialPage() {
 }
 async function cargarHistorialCompleto() {
     const container = document.getElementById('historyContainer');
-    if(!container) return;
+    if (!container) return;
     try {
         const res = await fetch('/api/historial');
         const data = await res.json();
-        if(data.length === 0) {
+        if (data.length === 0) {
             document.getElementById('emptyState').classList.remove('d-none');
         } else {
             renderHistoryGrid(data);
             container.classList.remove('d-none');
         }
         document.getElementById('loadingHistory').classList.add('d-none');
-    } catch(e) {}
+    } catch (e) { }
 }
 function renderHistoryGrid(data) {
     const container = document.getElementById('historyContainer');
