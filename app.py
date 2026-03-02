@@ -166,42 +166,40 @@ def guardar_historial(vuelos, modo="Estándar"):
 # LÓGICA DEL CRON INTELIGENTE (DOBLE TURNO)
 # ==========================================================
 def tarea_en_segundo_plano():
-    # 1. Cargar configuración
-    if not config.get("origenes") or not config.get("destinos"): return
+    print(f"[{datetime.datetime.now()}] ⏰ Ejecutando Batida Programada...")
+    
+    # 1. Validar configuración
+    if not config.get("origenes") or not config.get("destinos"): 
+        print("⚠️ Configuración incompleta. Abortando cron.")
+        return
 
-    # 2. Listas maestras (Limpiamos espacios)
+    # 2. Preparar listas limpias
     origenes_raw = [o.strip().upper() for o in config["origenes"].split(",") if o.strip()]
     destinos_raw = [d.strip().upper() for d in config["destinos"].split(",") if d.strip()]
     fechas_ida_raw = [f.strip() for f in config["fechas_ida"].split(",") if f.strip()]
-    # Las vueltas pueden tener huecos, hay que tratarlas con cuidado
     fechas_vuelta_raw = config.get("fechas_vuelta", "").split(",") 
 
-    # VALIDACIÓN: Si el número de destinos no coincide con el de fechas, algo va mal
-    # (Por eso es importante crear una tarjeta por cada fecha distinta)
-    if len(destinos_raw) != len(fechas_ida_raw):
-        print("⚠️ Error: Desajuste entre destinos y fechas. Usa una tarjeta por viaje.")
-        # Fallback: Usar lógica antigua si hay desajuste
-        min_len = min(len(destinos_raw), len(fechas_ida_raw))
-    else:
-        min_len = len(destinos_raw)
+    # Si no hay destinos o fechas, salimos
+    if not destinos_raw or not fechas_ida_raw: return
 
-    print(f"[{datetime.datetime.now()}] 🧠 Smart Rotation (Modo Tarjetas)...")
-
-    # 3. MATEMÁTICA DE ROTACIÓN (Total combinaciones = Origenes x Tarjetas de Viaje)
-    total_viajes = min_len # Número de tarjetas
+    # 3. Matemática de Rotación (Modo Tarjetas)
+    # Total de tarjetas = Mínimo común entre destinos y fechas (parejas)
+    total_viajes = min(len(destinos_raw), len(fechas_ida_raw))
     total_combos = len(origenes_raw) * total_viajes
     
     dia_anio = datetime.datetime.now().timetuple().tm_yday
     
-    # Doble turno diario
+    # Índices para hoy (Doble turno)
     indices_hoy = [dia_anio % total_combos, (dia_anio + 1) % total_combos]
     
     url_tg = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     rutas_revisadas = []
+    
+    print(f"ℹ️ Hoy tocan los índices: {indices_hoy} de {total_combos} combinaciones.")
 
-    # 4. EJECUCIÓN
+    # 4. EJECUCIÓN DEL DOBLE TURNO
     for idx in indices_hoy:
-        # Calcular qué Origen y qué Tarjeta (Viaje) toca
+        # Calcular qué Origen y qué Tarjeta toca
         idx_origen = idx % len(origenes_raw)
         idx_viaje = (idx // len(origenes_raw)) % total_viajes
         
@@ -209,14 +207,14 @@ def tarea_en_segundo_plano():
         destino_hoy = destinos_raw[idx_viaje]
         fecha_ida_hoy = fechas_ida_raw[idx_viaje]
         
-        # Intentar sacar la fecha de vuelta correspondiente (si existe)
+        # Fecha vuelta (si existe para este índice)
         fecha_vuelta_hoy = ""
         if idx_viaje < len(fechas_vuelta_raw):
             fecha_vuelta_hoy = fechas_vuelta_raw[idx_viaje]
 
-        rutas_revisadas.append(f"{origen_hoy} ➔ {destino_hoy} ({fecha_ida_hoy})")
+        rutas_revisadas.append(f"{origen_hoy} ➔ {destino_hoy}")
         
-        # Configuración "Quirúrgica": Solo mandamos 1 destino y sus fechas exactas
+        # Configuración "Quirúrgica"
         config_smart = {
             "origenes": origen_hoy,
             "destinos": destino_hoy,
@@ -226,27 +224,50 @@ def tarea_en_segundo_plano():
             "precio_maximo_pp": config["precio_maximo_pp"]
         }
         
-        # Ejecutar Búsqueda
+        print(f"🔎 Buscando: {origen_hoy}-{destino_hoy} ({fecha_ida_hoy})...")
+        
+        # BUSCAR EN API
         vuelos = buscar_en_api(config_smart)
         guardar_historial(vuelos, f"Auto: {origen_hoy}-{destino_hoy}")
         
+        # === CORRECCIÓN AQUÍ: ENVÍO A TELEGRAM ===
         if isinstance(vuelos, list) and len(vuelos) > 0:
-            mensaje = f"🚨 <b>¡CHOLLO: {origen_hoy} ✈️ {destino_hoy}!</b> 🚨\n\n"
+            print(f"✅ ¡Vuelos encontrados! Enviando a Telegram...")
+            
+            mensaje = f"🚨 <b>¡CHOLLO DETECTADO!</b> 🚨\n"
+            mensaje += f"✈️ <b>{origen_hoy} ➡️ {destino_hoy}</b>\n"
+            
+            # Cogemos solo los 3 primeros para no spamear
             for v in vuelos[:3]:
-                mensaje += f"📅 <b>{v['fecha_detectada']}</b>\n"
-                mensaje += f"💰 <b>{v['precio_pp']}€</b> ({v['estado_precio']})\n"
-                mensaje += f"🔗 <a href='{v['enlace']}'>Ver vuelo</a>\n\n"
-            requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+                # Extraemos datos con seguridad (.get por si acaso)
+                fecha = v.get('fecha_detectada', 'Fecha N/A')
+                precio = v.get('precio_pp', 0)
+                estado = v.get('estado_precio', '')
+                link = v.get('enlace', '#')
+                
+                mensaje += f"\n📅 <b>{fecha}</b>"
+                mensaje += f"\n💰 <b>{precio}€</b> ({estado})"
+                mensaje += f"\n🔗 <a href='{link}'>Ver vuelo</a>\n"
+            
+            # Enviar mensaje
+            try:
+                requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "HTML"})
+            except Exception as e:
+                print(f"❌ Error enviando Telegram: {e}")
+        else:
+            print(f"📉 Sin vuelos baratos para esta ruta hoy.")
 
-    # 5. REPORTE DE VIDA
-    mensaje_vida = f"✅ <b>Sabueso (Modo Tarjetas):</b>\n\n"
-    mensaje_vida += f"Hoy he revisado:\n1️⃣ {rutas_revisadas[0]}\n2️⃣ {rutas_revisadas[1]}\n\n"
-    mensaje_vida += f"Seguimos buscando bajo {config['precio_maximo_pp']}€. 🫡"
+    # 5. REPORTE DE VIDA (Opcional, para saber que está vivo)
+    # Solo lo enviamos si NO se encontraron chollos, para dar señales de vida
+    mensaje_vida = f"🤖 <b>Reporte Diario Sabueso:</b>\n\n"
+    mensaje_vida += f"He rastreado estas rutas hoy:\n"
+    mensaje_vida += f"1️⃣ {rutas_revisadas[0]}\n"
+    mensaje_vida += f"2️⃣ {rutas_revisadas[1]}\n\n"
+    mensaje_vida += f"Ningún vuelo por debajo de {config['precio_maximo_pp']}€."
     
-    # Enviar reporte solo si no se encontraron vuelos para no saturar
-    if not any(isinstance(v, list) and len(v) > 0 for v in [buscar_en_api(config)]): 
-         requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje_vida, "parse_mode": "HTML"})
-
+    # Descomenta la siguiente línea si quieres recibir este reporte diario aunque no haya ofertas
+    requests.post(url_tg, data={"chat_id": TELEGRAM_CHAT_ID, "text": mensaje_vida, "parse_mode": "HTML"})
+    
 # ==========================================================
 # RUTAS FLASK
 # ==========================================================
