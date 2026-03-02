@@ -23,17 +23,26 @@
 
                 <div class="glass-card mb-4 p-3">
                     <h6 class="text-uppercase text-muted small fw-bold mb-3"><i class="bi bi-cpu"></i> Telemetría</h6>
+
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="small text-light">Estado API</span>
+                        <span class="small text-light">Consumo Mensual</span>
                         <span id="apiUso" class="badge bg-secondary">...</span>
                     </div>
+
+                    <hr class="border-secondary opacity-25 my-2">
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small text-info"><i class="bi bi-search me-1"></i> Coste Búsqueda</span>
+                        <span id="costeManual" class="badge bg-dark border border-info text-info">0</span>
+                    </div>
+
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="small text-muted">Última ejecución</span>
-                        <div class="text-end">
-                            <span id="gastoEjecucion" class="badge bg-warning text-dark"
-                                style="font-size:0.65rem;">—</span>
-                            <div id="gastoModo" class="text-muted" style="font-size:0.6rem;"></div>
-                        </div>
+                        <span class="small text-warning"><i class="bi bi-globe me-1"></i> Coste Explorador</span>
+                        <span id="costeExplorador" class="badge bg-dark border border-warning text-warning">0</span>
+                    </div>
+
+                    <div class="mt-2 text-end">
+                        <small class="text-muted" style="font-size: 0.65rem;">*Créditos estimados por clic</small>
                     </div>
                 </div>
 
@@ -96,10 +105,10 @@
                                             value="{{ config.pasajeros }}">
                                     </div>
                                     <div class="col-6">
-                                        <label class="form-label small text-warning fw-bold text-uppercase">Max
-                                            €</label>
-                                        <input type="number" class="form-control border-warning text-warning"
-                                            id="precio_maximo_pp" value="{{ config.precio_maximo_pp }}">
+                                        <label class="form-label small text-warning fw-bold text-uppercase">Max € (Por
+                                            Pers)</label> <input type="number"
+                                            class="form-control border-warning text-warning" id="precio_maximo_pp"
+                                            value="{{ config.precio_maximo_pp }}">
                                     </div>
                                 </div>
 
@@ -140,7 +149,7 @@
                                         <tr class="text-muted small text-uppercase">
                                             <th>Ruta / Fecha</th>
                                             <th>Aerolínea</th>
-                                            <th class="text-end">Precio / pers.</th>
+                                            <th class="text-end">Precio / Pers.</th>
                                             <th class="text-end">Link</th>
                                         </tr>
                                     </thead>

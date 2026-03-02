@@ -114,6 +114,17 @@ function initCardSystem() {
             ejecutarBusqueda('/api/explorar', "Escaneando media Europa...");
         });
     }
+
+    // --- AÑADIR ESTO: LISTENERS PARA LA CALCULADORA ---
+
+    // 1. Si cambian los orígenes -> Recalcular
+    const inputOrigenes = document.getElementById('origenes');
+    if (inputOrigenes) {
+        inputOrigenes.addEventListener('input', actualizarCalculadora);
+    }
+
+    // 2. Ejecutar cálculo inicial
+    actualizarCalculadora();
 }
 
 // FUNCIÓN: CREAR HTML DE UNA TARJETA
@@ -154,14 +165,48 @@ function agregarTarjetaViaje(destino = "", ida = "", vuelta = "") {
     `;
 
     container.insertAdjacentHTML('beforeend', html);
+
+    // NUEVO: Recalcular costes al añadir
+    actualizarCalculadora();
 }
 
 function borrarTarjeta(id) {
     const card = document.getElementById(`card-${id}`);
     if (card) {
         card.style.opacity = '0';
-        setTimeout(() => card.remove(), 200); // Pequeña animación al borrar
+        setTimeout(() => {
+            card.remove();
+            actualizarCalculadora(); // NUEVO: Recalcular al borrar
+        }, 200);
     }
+}
+
+/* =========================================
+   CALCULADORA DE COSTES EN VIVO
+   ========================================= */
+function actualizarCalculadora() {
+    // 1. Contar Orígenes
+    const origenesVal = document.getElementById('origenes').value;
+    // Dividimos por comas y filtramos vacíos para tener el número real
+    const numOrigenes = origenesVal.split(',').filter(x => x.trim().length > 0).length;
+
+    // 2. Contar Tarjetas de Viaje (Destinos configurados)
+    const numTarjetas = document.querySelectorAll('.viaje-card').length;
+
+    // 3. Cálculos
+    // Búsqueda Manual: Origenes * Tarjetas (Cada tarjeta es 1 destino + 1 fecha)
+    const costeManual = numOrigenes * numTarjetas;
+
+    // Modo Explorador: Origenes * 13 (Destinos fijos explorador) * Tarjetas (Fechas)
+    // El explorador busca para las fechas de CADA tarjeta en 13 aeropuertos europeos.
+    const costeExplorador = numOrigenes * 13 * numTarjetas;
+
+    // 4. Actualizar HTML
+    const badgeManual = document.getElementById('costeManual');
+    const badgeExplorador = document.getElementById('costeExplorador');
+
+    if (badgeManual) badgeManual.textContent = costeManual;
+    if (badgeExplorador) badgeExplorador.textContent = costeExplorador;
 }
 
 /* =========================================
@@ -213,6 +258,10 @@ function renderTabla(data) {
         const tr = document.createElement('tr');
         const badgeColor = v.estado_precio.includes("BARATO") ? "success" : "light text-dark";
 
+        // Calculamos visualmente el precio total (Backend ya lo manda, pero por si acaso)
+        // v.precio_total suele venir del backend. Si no, v.precio_pp * pax
+        const precioTotal = v.precio_total || (v.precio_pp * parseInt(document.getElementById('pasajeros').value || 2));
+
         tr.innerHTML = `
             <td>
                 <div class="flight-route fw-bold small">${v.origen} <i class="bi bi-arrow-right text-secondary"></i> ${v.destino}</div>
@@ -225,8 +274,8 @@ function renderTabla(data) {
                 </div>
             </td>
             <td class="text-end">
-                <div class="fw-bold text-success">${v.precio_pp}€</div>
-                <div class="text-muted" style="font-size:0.65rem;">por persona</div>
+                <div class="fw-bold text-success fs-5">${v.precio_pp}€</div>
+                <div class="text-muted" style="font-size: 0.65rem;">Total: ${precioTotal}€</div>
             </td>
             <td class="text-end">
                 <a href="${v.enlace}" target="_blank" class="btn btn-sm btn-primary py-0 px-2" style="font-size: 0.7rem;">Ver</a>
